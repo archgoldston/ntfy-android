@@ -133,6 +133,12 @@
             android:layout_height="wrap_content"
             android:contentDescription="@string/single_floating_search"
             android:src="@drawable/ic_search_white_24dp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:elevation="0dp"
+            app:pressedTranslationZ="0dp"
+            app:hoveredFocusedTranslationZ="0dp"
+            app:useCompatPadding="false"
             style="@style/FloatingActionButton" />
         <Space
             android:layout_width="1dp"
@@ -143,6 +149,12 @@
             android:layout_height="wrap_content"
             android:contentDescription="@string/single_floating_settings"
             android:src="@drawable/ic_single_settings_24dp"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
+            app:elevation="0dp"
+            app:pressedTranslationZ="0dp"
+            app:hoveredFocusedTranslationZ="0dp"
+            app:useCompatPadding="false"
             style="@style/FloatingActionButton" />
     </LinearLayout>
 

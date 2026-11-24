@@ -22,7 +22,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -66,7 +65,6 @@ import io.heckel.ntfy.util.dangerButton
 import io.heckel.ntfy.util.displayName
 import io.heckel.ntfy.util.formatDateShort
 import io.heckel.ntfy.util.isDarkThemeOn
-import io.heckel.ntfy.util.isIgnoringBatteryOptimizations
 import io.heckel.ntfy.util.isNetworkAvailable
 import io.heckel.ntfy.util.maybeSplitTopicUrl
 import io.heckel.ntfy.util.randomSubscriptionId
@@ -137,9 +135,9 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        keepContentBelowStatusBar()
 
         Log.init(this) // Init logs in all entry points
         Log.d(TAG, "Create $this")
@@ -178,7 +176,7 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
         ViewCompat.setOnApplyWindowInsetsListener(fab) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val layoutParams = view.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-            layoutParams.bottomMargin = systemBars.bottom
+            layoutParams.bottomMargin = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0
             view.layoutParams = layoutParams
             insets
         }
@@ -209,7 +207,7 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
         mainList.clipToPadding = false
         ViewCompat.setOnApplyWindowInsetsListener(mainList) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(bottom = systemBars.bottom)
+            v.updatePadding(bottom = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0)
             insets
         }
 
@@ -448,14 +446,9 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
         redrawList()
     }
 
-    private fun showHideBatteryBanner(subscriptions: List<Subscription>) {
-        val hasInstantSubscriptions = subscriptions.count { it.instant } > 0
-        val batteryRemindTimeReached = repository.getBatteryOptimizationsRemindTime() < System.currentTimeMillis()
-        val ignoringOptimizations = isIgnoringBatteryOptimizations(this@MainActivity)
-        val showBanner = batteryRemindTimeReached && !ignoringOptimizations
-        val batteryBanner = findViewById<View>(R.id.main_banner_battery)
-        batteryBanner.visibility = if (showBanner) View.VISIBLE else View.GONE
-        Log.d(TAG, "Battery: ignoring optimizations = $ignoringOptimizations (we want this to be true); instant subscriptions = $hasInstantSubscriptions; remind time reached = $batteryRemindTimeReached; banner = $showBanner")
+    // Do not show the battery-optimization warning in the single-topic receiver.
+    private fun showHideBatteryBanner(@Suppress("UNUSED_PARAMETER") subscriptions: List<Subscription>) {
+        findViewById<View>(R.id.main_banner_battery).visibility = View.GONE
     }
 
     private fun showHideWebSocketBanner(subscriptions: List<Subscription>) {

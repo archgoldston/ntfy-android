@@ -13,7 +13,6 @@ import android.provider.Settings
 import android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
 import android.view.View
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
@@ -65,9 +64,9 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
     private lateinit var serviceManager: SubscriberServiceManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        keepContentBelowStatusBar()
 
         Log.d(TAG, "Create $this")
 

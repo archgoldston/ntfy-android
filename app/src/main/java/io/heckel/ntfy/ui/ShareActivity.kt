@@ -8,7 +8,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.*
 import android.widget.*
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -53,9 +52,9 @@ class ShareActivity : AppCompatActivity() {
     private lateinit var errorImage: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_share)
+        keepContentBelowStatusBar()
 
         Log.init(this) // Init logs in all entry points
         Log.d(TAG, "Create $this with intent $intent")

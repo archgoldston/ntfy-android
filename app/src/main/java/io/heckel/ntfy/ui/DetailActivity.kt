@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.text.Html
 import android.view.Menu
@@ -13,7 +14,6 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
@@ -135,9 +135,9 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)
+        keepContentBelowStatusBar()
 
         Log.d(TAG, "Create $this")
 
@@ -314,7 +314,7 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         mainList.clipToPadding = false
         ViewCompat.setOnApplyWindowInsetsListener(mainList) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(bottom = systemBars.bottom)
+            v.updatePadding(bottom = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0)
             insets
         }
 
@@ -442,7 +442,7 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         ViewCompat.setOnApplyWindowInsetsListener(controls) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val lp = view.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.bottomMargin = bars.bottom + (20 * resources.displayMetrics.density).toInt()
+            lp.bottomMargin = (if (Build.VERSION.SDK_INT >= 35) bars.bottom else 0) + (20 * resources.displayMetrics.density).toInt()
             view.layoutParams = lp
             insets
         }

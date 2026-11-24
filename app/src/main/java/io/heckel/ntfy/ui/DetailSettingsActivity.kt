@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -43,9 +42,9 @@ class DetailSettingsActivity : AppCompatActivity() {
     private var subscriptionId: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        keepContentBelowStatusBar()
 
         Log.d(TAG, "Create $this")
 

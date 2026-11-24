@@ -27,7 +27,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 android:id="@+id/main_banner_battery"
-                android:visibility="visible"
+                android:visibility="gone"
         >
             <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
