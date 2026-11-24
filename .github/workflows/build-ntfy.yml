@@ -26,10 +26,35 @@ jobs:
       - name: Install SDK 36
         run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
 
-      - name: Build F-Droid release only
+      - name: Check KSP download sources
+        shell: bash
         run: |
+          set -euo pipefail
+          artifact='com/google/devtools/ksp/symbol-processing-gradle-plugin/2.3.2/symbol-processing-gradle-plugin-2.3.2.pom'
+          for base in 'https://maven-central.storage-download.googleapis.com/maven2' 'https://repo.maven.apache.org/maven2'; do
+            echo "Checking $base"
+            curl -L -sS --max-time 20 -o /dev/null -w 'HTTP %{http_code}\n' "$base/$artifact" || true
+          done
+
+      - name: Build F-Droid release only
+        shell: bash
+        run: |
+          set -o pipefail
           chmod +x ./gradlew
-          ./gradlew :app:assembleFdroidRelease --no-daemon
+          for attempt in 1 2; do
+            set +e
+            ./gradlew :app:assembleFdroidRelease --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+            code=${PIPESTATUS[0]}
+            set -e
+            if [ "$code" -eq 0 ]; then exit 0; fi
+            if [ "$attempt" -eq 2 ]; then exit "$code"; fi
+            # Retry only when Gradle could not fetch a plugin/dependency.
+            if ! grep -Eiq '(Plugin \[id:.*com\.google\.devtools\.ksp|Could not resolve|Could not GET|Read timed out|Connection reset|HTTP[^0-9]*(429|502|503|504))' gradle-build.log; then
+              exit "$code"
+            fi
+            echo 'Dependency download error; retrying build once...'
+            sleep 15
+          done
 
       # Optional: for install-over-existing-APK updates, configure the four
       # NTFY_KEYSTORE_* repository secrets. Otherwise a temporary CI signing

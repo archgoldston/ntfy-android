@@ -2,6 +2,8 @@ buildscript {
     // A clean CI runner has no locally cached Android/Kotlin build plugins.
     repositories {
         google()
+        // Alternate Maven Central host for GitHub Actions dependency downloads.
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
         gradlePluginPortal()
     }

@@ -1,6 +1,8 @@
 pluginManagement {
     repositories {
         // KSP is published in Maven Central. Look there first.
+        // Google Cloud's Maven Central mirror; the official repository remains below.
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
         google {
             content {
@@ -25,6 +27,7 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         mavenCentral()
         maven { url "https://jitpack.io" } // For StfalconImageViewer
     }
