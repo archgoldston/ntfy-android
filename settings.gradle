@@ -1,5 +1,7 @@
 pluginManagement {
     repositories {
+        // KSP is published in Maven Central. Look there first.
+        mavenCentral()
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -7,8 +9,16 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        mavenCentral()
         gradlePluginPortal()
+    }
+    // Resolve KSP using its published implementation module, rather than
+    // relying on a Gradle plugin marker in the runner's repository mirrors.
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'com.google.devtools.ksp') {
+                useModule("com.google.devtools.ksp:symbol-processing-gradle-plugin:${requested.version ?: '2.3.2'}")
+            }
+        }
     }
 }
 dependencyResolutionManagement {
