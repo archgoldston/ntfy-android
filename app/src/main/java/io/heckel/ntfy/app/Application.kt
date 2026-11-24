@@ -6,6 +6,7 @@ import android.net.Network
 import com.google.android.material.color.DynamicColors
 import io.heckel.ntfy.db.Repository
 import io.heckel.ntfy.service.SubscriberServiceManager
+import io.heckel.ntfy.up.Distributor
 import io.heckel.ntfy.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,14 @@ class Application : Application() {
         super.onCreate()
         if (repository.getDynamicColorsEnabled()) {
             DynamicColors.applyToActivitiesIfAvailable(this)
+        }
+        // Keep the UnifiedPush components consistent with the saved setting.
+        // New installs default to disabled; explicitly enabled installs stay enabled.
+        val distributor = Distributor(this)
+        if (repository.getUnifiedPushEnabled()) {
+            distributor.enableComponents()
+        } else {
+            distributor.disableComponents()
         }
         registerNetworkCallback()
     }

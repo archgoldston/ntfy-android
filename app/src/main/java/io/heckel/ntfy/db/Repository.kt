@@ -406,7 +406,7 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
     }
 
     fun getUnifiedPushEnabled(): Boolean {
-        return sharedPrefs.getBoolean(SHARED_PREFS_UNIFIEDPUSH_ENABLED, true) // Enabled by default
+        return sharedPrefs.getBoolean(SHARED_PREFS_UNIFIEDPUSH_ENABLED, false) // Disabled by default
     }
 
     fun setUnifiedPushEnabled(enabled: Boolean) {

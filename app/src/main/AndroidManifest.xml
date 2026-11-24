@@ -98,7 +98,7 @@
         </activity>
 
         <!-- UnifiedPush link activity to facilitate distributor selection, see https://unifiedpush.org/developers/spec/android/#link-activity -->
-        <activity android:name=".up.LinkActivity" android:exported="true">
+        <activity android:name=".up.LinkActivity" android:enabled="false" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -158,7 +158,7 @@
         <!-- Broadcast receiver for UnifiedPush; must match https://github.com/UnifiedPush/UP-spec/blob/main/specifications.md -->
         <receiver
                 android:name=".up.BroadcastReceiver"
-                android:enabled="true"
+                android:enabled="false"
                 android:exported="true">
             <intent-filter>
                 <action android:name="org.unifiedpush.android.distributor.REGISTER"/>
