@@ -183,8 +183,9 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
             )
         }
 
-        // Show 'Back' button
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        // Single-topic home: do not show the old back arrow, topic name or menu.
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        toolbarLayout.visibility = View.GONE
 
         // Hide links that lead to payments, see https://github.com/binwiederhier/ntfy/issues/1463
         val howToLink = findViewById<TextView>(R.id.detail_how_to_link)
@@ -193,7 +194,9 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         // Handle direct deep links to topic "ntfy://..."
         val url = intent?.data
         if (intent?.action == ACTION_VIEW && url != null) {
-            maybeSubscribeAndLoadView(url)
+            // Deep links must not add a second subscription in single-topic mode.
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
         } else {
             loadView()
         }
@@ -288,14 +291,10 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
 
         // Set title
         val subscriptionBaseUrl = intent.getStringExtra(MainActivity.EXTRA_SUBSCRIPTION_BASE_URL) ?: return
-        val topicUrl = topicShortUrl(subscriptionBaseUrl, subscriptionTopic)
-        title = subscriptionDisplayName
-
-        // Set "how to instructions"
+        // Do not reveal the secret topic in the window title or hidden help text.
+        title = getString(R.string.app_name)
         val howToExample: TextView = findViewById(R.id.detail_how_to_example)
-        val howToText = getString(R.string.detail_how_to_example, topicUrl)
-        howToExample.linksClickable = true
-        howToExample.text = Html.fromHtml(howToText, Html.FROM_HTML_MODE_LEGACY)
+        howToExample.text = ""
 
         // Swipe to refresh
         mainListContainer = findViewById(R.id.detail_notification_list_container)
@@ -328,8 +327,8 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
                 // Show list view
                 adapter.submitList(notifications.toMutableList())
                 if (notifications.isEmpty()) {
-                    mainListContainer.visibility = View.GONE
-                    noEntriesText.visibility = View.VISIBLE
+                    mainListContainer.visibility = View.VISIBLE
+                    noEntriesText.visibility = View.GONE
                     // Show different text based on whether we're searching or not
                     if (isSearchActive && viewModel.hasSearchQuery()) {
                         noSearchResultsText.text = getString(R.string.detail_no_search_results)
@@ -405,8 +404,48 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
             // Ignore errors
         }
 
-        // Setup FAB and message bar
-        setupPublishUI()
+        // Single-topic receiver: no publishing controls, just floating search/settings.
+        setupSingleTopicControls()
+    }
+
+    private fun setupSingleTopicControls() {
+        findViewById<View>(R.id.detail_fab).visibility = View.GONE
+        findViewById<View>(R.id.detail_message_bar).visibility = View.GONE
+        val floatingSearch = findViewById<SearchView>(R.id.single_search_view)
+        floatingSearch.queryHint = getString(R.string.detail_menu_search_hint)
+        floatingSearch.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextChange(newText: String?): Boolean {
+                viewModel.setSearchQuery(newText.orEmpty())
+                return true
+            }
+        })
+        findViewById<View>(R.id.single_search_fab).setOnClickListener {
+            val opening = !floatingSearch.isVisible
+            floatingSearch.isVisible = opening
+            isSearchActive = opening
+            if (opening) {
+                floatingSearch.isIconified = false
+                floatingSearch.requestFocus()
+            } else {
+                floatingSearch.setQuery("", false)
+                floatingSearch.clearFocus()
+                (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .hideSoftInputFromWindow(floatingSearch.windowToken, 0)
+                viewModel.setSearchQuery("")
+            }
+        }
+        findViewById<View>(R.id.single_settings_fab).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        val controls = findViewById<View>(R.id.single_fab_stack)
+        ViewCompat.setOnApplyWindowInsetsListener(controls) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val lp = view.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
+            lp.bottomMargin = bars.bottom + (20 * resources.displayMetrics.density).toInt()
+            view.layoutParams = lp
+            insets
+        }
     }
 
     private fun setupPublishUI() {
@@ -539,7 +578,7 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
             subscriptionDisplayName = displayName(appBaseUrl, subscription)
 
             showHideMenuItems()
-            updateTitle(subscriptionDisplayName)
+            updateTitle(getString(R.string.app_name))
         }
     }
 
@@ -898,7 +937,7 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
     private fun onSettingsClick() {
         Log.d(TAG, "Opening subscription settings for ${topicShortUrl(subscriptionBaseUrl, subscriptionTopic)}")
 
-        val intent = Intent(this, DetailSettingsActivity::class.java)
+        val intent = Intent(this, SettingsActivity::class.java)
         intent.putExtra(EXTRA_SUBSCRIPTION_ID, subscriptionId)
         intent.putExtra(EXTRA_SUBSCRIPTION_BASE_URL, subscriptionBaseUrl)
         intent.putExtra(EXTRA_SUBSCRIPTION_TOPIC, subscriptionTopic)

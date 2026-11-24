@@ -386,6 +386,49 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
 
         // FIXME 2026-05-04: Remove this migration after 1 month
         migrateSubscriptionIconsFromCache()
+
+        // Single-topic mode: bootstrap one secure random topic on first launch,
+        // then open the notification list directly on every subsequent launch.
+        openOnlySubscription()
+    }
+
+    private fun openOnlySubscription() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val subscriptions = repository.getSubscriptions()
+                val subscription = subscriptions.firstOrNull() ?: Subscription(
+                    id = randomSubscriptionId(),
+                    baseUrl = getString(R.string.app_base_url),
+                    topic = repository.getOrCreateSingleTopic(),
+                    instant = true, // F-Droid has no FCM; keep the foreground subscriber connected.
+                    dedicatedChannels = false,
+                    mutedUntil = 0,
+                    minPriority = Repository.MIN_PRIORITY_USE_GLOBAL,
+                    autoDelete = Repository.AUTO_DELETE_USE_GLOBAL,
+                    insistent = Repository.INSISTENT_MAX_PRIORITY_USE_GLOBAL,
+                    lastNotificationId = null,
+                    icon = null,
+                    upAppId = null,
+                    upConnectorToken = null,
+                    displayName = null,
+                    totalCount = 0,
+                    newCount = 0,
+                    lastActive = Date().time / 1000
+                ).also { repository.addSubscription(it) }
+                SubscriberServiceManager.refresh(this@MainActivity)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        startDetailView(subscription)
+                        finish()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Unable to initialize single topic", e)
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "订阅初始化失败：${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun maybeRequestNotificationPermission() {

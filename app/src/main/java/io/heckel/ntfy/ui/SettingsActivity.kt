@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,12 +15,14 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -32,13 +35,17 @@ import io.heckel.ntfy.R
 import io.heckel.ntfy.backup.Backuper
 import io.heckel.ntfy.db.CustomHeader
 import io.heckel.ntfy.db.Repository
+import io.heckel.ntfy.msg.DownloadAttachmentWorker
+import io.heckel.ntfy.msg.NotificationService
 import io.heckel.ntfy.db.User
 import io.heckel.ntfy.service.SubscriberServiceManager
 import io.heckel.ntfy.up.Distributor
 import io.heckel.ntfy.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -161,6 +168,162 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         private lateinit var serviceManager: SubscriberServiceManager
         private var autoDownloadSelection = AUTO_DOWNLOAD_SELECTION_NOT_SET
 
+        private fun setupSingleSubscriptionPreferences() {
+            val urlPref = findPreference<Preference>("single_topic_url")
+            val mutePref = findPreference<ListPreference>("single_subscription_mute")
+            val priorityPref = findPreference<ListPreference>("single_subscription_priority")
+            val deletePref = findPreference<ListPreference>("single_subscription_autodelete")
+            val insistentPref = findPreference<ListPreference>("single_subscription_insistent")
+            val namePref = findPreference<EditTextPreference>("single_subscription_display_name")
+            val channelsPref = findPreference<SwitchPreferenceCompat>("single_subscription_channels")
+            val openChannelsPref = findPreference<Preference>("single_subscription_open_channels")
+            val iconSetPref = findPreference<Preference>("single_subscription_icon_set")
+            val iconRemovePref = findPreference<Preference>("single_subscription_icon_remove")
+            var singleId = 0L
+            val iconPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { picked ->
+                if (picked != null && singleId != 0L) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val ctx = requireContext().applicationContext
+                            val dest = File(File(ctx.filesDir, SUBSCRIPTION_ICONS).apply { mkdirs() }, singleId.toString())
+                            ctx.contentResolver.openInputStream(picked)?.use { input ->
+                                dest.outputStream().use { output -> input.copyTo(output) }
+                            } ?: throw IllegalStateException("Cannot read selected image")
+                            val iconUri = FileProvider.getUriForFile(ctx, DownloadAttachmentWorker.FILE_PROVIDER_AUTHORITY, dest)
+                            repository.getSubscription(singleId)?.let {
+                                repository.updateSubscription(it.copy(icon = iconUri.toString()))
+                            }
+                            withContext(Dispatchers.Main) {
+                                iconSetPref?.isVisible = false
+                                iconRemovePref?.isVisible = true
+                            }
+                        } catch (e: Exception) {
+                            Log.w("SingleTopicSettings", "Cannot set subscription icon", e)
+                        }
+                    }
+                }
+            }
+            lifecycleScope.launch {
+                val sub = withContext(Dispatchers.IO) {
+                    repository.getSubscriptions().firstOrNull()
+                } ?: return@launch
+                singleId = sub.id
+                val url = "${sub.baseUrl.trimEnd('/')}/${sub.topic}"
+                urlPref?.summary = url
+                urlPref?.setOnPreferenceClickListener {
+                    copyToClipboard(requireContext(), "topic url", url)
+                    true
+                }
+                mutePref?.value = when (sub.mutedUntil) {
+                    0L, 1L -> sub.mutedUntil.toString()
+                    else -> "0"
+                }
+                priorityPref?.value = sub.minPriority.toString()
+                deletePref?.value = sub.autoDelete.toString()
+                insistentPref?.value = sub.insistent.toString()
+                namePref?.text = sub.displayName.orEmpty()
+                channelsPref?.isChecked = sub.dedicatedChannels
+                openChannelsPref?.isVisible = sub.dedicatedChannels
+                iconSetPref?.isVisible = sub.icon == null
+                iconRemovePref?.isVisible = sub.icon != null
+
+                namePref?.setOnPreferenceChangeListener { _, value ->
+                    val newName = value.toString().takeIf { it.isNotBlank() }
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let {
+                            val updated = it.copy(displayName = newName)
+                            repository.updateSubscription(updated)
+                            if (updated.dedicatedChannels) {
+                                NotificationService(requireContext()).createSubscriptionNotificationChannels(updated)
+                            }
+                        }
+                    }
+                    true
+                }
+                channelsPref?.setOnPreferenceChangeListener { _, value ->
+                    val enabled = value as Boolean
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let {
+                            val updated = it.copy(dedicatedChannels = enabled)
+                            repository.updateSubscription(updated)
+                            val notifications = NotificationService(requireContext())
+                            if (enabled) notifications.createSubscriptionNotificationChannels(updated)
+                            else notifications.deleteSubscriptionNotificationChannels(updated)
+                        }
+                    }
+                    openChannelsPref?.isVisible = enabled
+                    true
+                }
+                openChannelsPref?.setOnPreferenceClickListener {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, BuildConfig.APPLICATION_ID)
+                    })
+                    true
+                }
+                iconSetPref?.setOnPreferenceClickListener {
+                    iconPicker.launch("image/*")
+                    true
+                }
+                iconRemovePref?.setOnPreferenceClickListener {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let {
+                            val oldIcon = it.icon
+                            repository.updateSubscription(it.copy(icon = null))
+                            if (oldIcon != null) {
+                                try { requireContext().contentResolver.delete(Uri.parse(oldIcon), null, null) }
+                                catch (e: Exception) { Log.w("SingleTopicSettings", "Cannot remove icon", e) }
+                            }
+                        }
+                    }
+                    iconRemovePref?.isVisible = false
+                    iconSetPref?.isVisible = true
+                    true
+                }
+
+                // Preference listeners persist to the subscription, NOT the app-global settings.
+                mutePref?.setOnPreferenceChangeListener { _, value ->
+                    val minutes = value.toString().toLongOrNull() ?: return@setOnPreferenceChangeListener false
+                    val now = System.currentTimeMillis() / 1000L
+                    val until = when (minutes) {
+                        Repository.MUTED_UNTIL_SHOW_ALL, Repository.MUTED_UNTIL_FOREVER -> minutes
+                        Repository.MUTED_UNTIL_TOMORROW -> Calendar.getInstance().apply {
+                            add(Calendar.DAY_OF_MONTH, 1)
+                            set(Calendar.HOUR_OF_DAY, 8)
+                            set(Calendar.MINUTE, 30)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis / 1000L
+                        else -> now + minutes * 60L
+                    }
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(mutedUntil = until)) }
+                    }
+                    true
+                }
+                priorityPref?.setOnPreferenceChangeListener { _, value ->
+                    val v = value.toString().toIntOrNull() ?: return@setOnPreferenceChangeListener false
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(minPriority = v)) }
+                    }
+                    true
+                }
+                deletePref?.setOnPreferenceChangeListener { _, value ->
+                    val v = value.toString().toLongOrNull() ?: return@setOnPreferenceChangeListener false
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(autoDelete = v)) }
+                    }
+                    true
+                }
+                insistentPref?.setOnPreferenceChangeListener { _, value ->
+                    val v = value.toString().toIntOrNull() ?: return@setOnPreferenceChangeListener false
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(insistent = v)) }
+                    }
+                    true
+                }
+            }
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.main_preferences, rootKey)
 
@@ -168,6 +331,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             repository = Repository.getInstance(requireActivity())
             serviceManager = SubscriberServiceManager(requireActivity())
             autoDownloadSelection = repository.getAutoDownloadMaxSize() // Only used for <= Android P, due to permissions request
+            setupSingleSubscriptionPreferences()
 
             // Important note: We do not use the default shared prefs to store settings. Every
             // preferenceDataStore is overridden to use the repository. This is convenient, because
@@ -285,6 +449,10 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 when (val maxSize = pref.value.toLongOrNull() ?: repository.getAutoDownloadMaxSize()) {
                     Repository.AUTO_DOWNLOAD_NEVER -> getString(R.string.settings_notifications_auto_download_summary_never)
                     Repository.AUTO_DOWNLOAD_ALWAYS -> getString(R.string.settings_notifications_auto_download_summary_always)
+                    Repository.AUTO_DOWNLOAD_IMAGES -> getString(R.string.single_auto_download_images)
+                    Repository.AUTO_DOWNLOAD_AUDIO -> getString(R.string.single_auto_download_audio)
+                    Repository.AUTO_DOWNLOAD_VIDEO -> getString(R.string.single_auto_download_video)
+                    Repository.AUTO_DOWNLOAD_ALL_MEDIA -> getString(R.string.single_auto_download_all_media)
                     else -> getString(R.string.settings_notifications_auto_download_summary_smaller_than_x, formatBytes(maxSize, decimals = 0))
                 }
             }

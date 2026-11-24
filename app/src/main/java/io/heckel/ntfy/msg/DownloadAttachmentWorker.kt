@@ -177,7 +177,10 @@ class DownloadAttachmentWorker(private val context: Context, params: WorkerParam
     }
 
     private fun shouldAbortDownload(): Boolean {
+        if (repository.isUnlimitedMediaDownload(attachment.name, attachment.type, attachment.url)) return false
         when (val maxAutoDownloadSize = repository.getAutoDownloadMaxSize()) {
+            Repository.AUTO_DOWNLOAD_IMAGES, Repository.AUTO_DOWNLOAD_AUDIO,
+            Repository.AUTO_DOWNLOAD_VIDEO, Repository.AUTO_DOWNLOAD_ALL_MEDIA -> return true
             Repository.AUTO_DOWNLOAD_NEVER -> return true
             Repository.AUTO_DOWNLOAD_ALWAYS -> return false
             else -> {
@@ -188,11 +191,11 @@ class DownloadAttachmentWorker(private val context: Context, params: WorkerParam
     }
 
     private fun getDownloadLimit(userAction: Boolean): Long? {
-        return if (userAction || repository.getAutoDownloadMaxSize() == Repository.AUTO_DOWNLOAD_ALWAYS) {
-            null
-        } else {
-            repository.getAutoDownloadMaxSize()
+        if (userAction || repository.getAutoDownloadMaxSize() == Repository.AUTO_DOWNLOAD_ALWAYS ||
+            repository.isUnlimitedMediaDownload(attachment.name, attachment.type, attachment.url)) {
+            return null
         }
+        return repository.getAutoDownloadMaxSize().takeIf { it > 1L }
     }
 
     private fun createUri(notification: Notification): Uri {

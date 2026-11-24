@@ -15,6 +15,7 @@ import androidx.lifecycle.map
 import io.heckel.ntfy.msg.ApiService
 import io.heckel.ntfy.util.Log
 import io.heckel.ntfy.util.validUrl
+import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -303,13 +304,43 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
         return sharedPrefs.getInt(SHARED_PREFS_MIN_PRIORITY, MIN_PRIORITY_ANY)
     }
 
-    fun getAutoDownloadMaxSize(): Long {
-        val defaultValue = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            AUTO_DOWNLOAD_NEVER // Need to request permission on older versions
-        } else {
-            AUTO_DOWNLOAD_DEFAULT
+    /** One secret topic per installation; survives launches and app upgrades. */
+    fun getOrCreateSingleTopic(): String {
+        synchronized(this) {
+            sharedPrefs.getString(SHARED_PREFS_SINGLE_TOPIC, null)?.let { return it }
+            val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+            val random = SecureRandom()
+            var topic: String
+            do {
+                topic = CharArray(50) { alphabet[random.nextInt(alphabet.length)] }.concatToString()
+            } while (topic.none { it.isDigit() } || topic.none { it.isLetter() })
+            sharedPrefs.edit(commit = true) { putString(SHARED_PREFS_SINGLE_TOPIC, topic) }
+            return topic
         }
-        return sharedPrefs.getLong(SHARED_PREFS_AUTO_DOWNLOAD_MAX_SIZE, defaultValue)
+    }
+
+    fun getAutoDownloadMaxSize(): Long {
+        return sharedPrefs.getLong(SHARED_PREFS_AUTO_DOWNLOAD_MAX_SIZE, AUTO_DOWNLOAD_IMAGES)
+    }
+
+    /** The new MIME-type choices have no size limit. Existing size limits remain intact. */
+    fun isUnlimitedMediaDownload(name: String?, mimeType: String?, url: String?): Boolean {
+        val choice = getAutoDownloadMaxSize()
+        if (choice !in listOf(AUTO_DOWNLOAD_IMAGES, AUTO_DOWNLOAD_AUDIO, AUTO_DOWNLOAD_VIDEO, AUTO_DOWNLOAD_ALL_MEDIA)) return false
+        val type = mimeType?.substringBefore(';')?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
+        val ext = (name?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
+            ?: url?.substringBefore('?')?.substringAfterLast('.', ""))?.lowercase(java.util.Locale.ROOT).orEmpty()
+        val category = when {
+            type.startsWith("image/") -> AUTO_DOWNLOAD_IMAGES
+            type.startsWith("audio/") -> AUTO_DOWNLOAD_AUDIO
+            type.startsWith("video/") -> AUTO_DOWNLOAD_VIDEO
+            type.isNotEmpty() && type != "application/octet-stream" -> null
+            ext in setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "avif", "svg") -> AUTO_DOWNLOAD_IMAGES
+            ext in setOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma", "amr", "aiff") -> AUTO_DOWNLOAD_AUDIO
+            ext in setOf("mp4", "mkv", "mov", "webm", "avi", "flv", "wmv", "m4v", "3gp", "mpeg", "mpg") -> AUTO_DOWNLOAD_VIDEO
+            else -> null
+        }
+        return category != null && (choice == AUTO_DOWNLOAD_ALL_MEDIA || category == choice)
     }
 
     fun setAutoDownloadMaxSize(maxSize: Long) {
@@ -649,6 +680,7 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
         const val SHARED_PREFS_MUTED_UNTIL_TIMESTAMP = "MutedUntil"
         const val SHARED_PREFS_MIN_PRIORITY = "MinPriority"
         const val SHARED_PREFS_AUTO_DOWNLOAD_MAX_SIZE = "AutoDownload"
+        private const val SHARED_PREFS_SINGLE_TOPIC = "SingleTopicV1"
         const val SHARED_PREFS_AUTO_DELETE_SECONDS = "AutoDelete"
         const val SHARED_PREFS_CONNECTION_PROTOCOL = "ConnectionProtocol"
         const val SHARED_PREFS_DARK_MODE = "DarkMode"
@@ -680,6 +712,10 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
         const val AUTO_DOWNLOAD_NEVER = 0L // Values must match values.xml
         const val AUTO_DOWNLOAD_ALWAYS = 1L
         const val AUTO_DOWNLOAD_DEFAULT = ONE_MB_BYTES
+        const val AUTO_DOWNLOAD_IMAGES = -1001L
+        const val AUTO_DOWNLOAD_AUDIO = -1002L
+        const val AUTO_DOWNLOAD_VIDEO = -1003L
+        const val AUTO_DOWNLOAD_ALL_MEDIA = -1004L
 
         private const val ONE_HOUR_SECONDS = 60 * 60L
         private const val ONE_DAY_SECONDS = 24 * ONE_HOUR_SECONDS

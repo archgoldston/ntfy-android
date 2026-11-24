@@ -135,8 +135,11 @@ class DownloadIconWorker(private val context: Context, params: WorkerParameters)
     }
 
     private fun getDownloadLimit(): Long {
-        return if (repository.getAutoDownloadMaxSize() != Repository.AUTO_DOWNLOAD_NEVER && repository.getAutoDownloadMaxSize() != Repository.AUTO_DOWNLOAD_ALWAYS) {
-            Math.min(repository.getAutoDownloadMaxSize(), MAX_ICON_DOWNLOAD_BYTES)
+        val selected = repository.getAutoDownloadMaxSize()
+        // Attachment MIME filters use negative sentinels; they must not turn
+        // the separate icon downloader's byte limit into a negative number.
+        return if (selected > Repository.AUTO_DOWNLOAD_ALWAYS) {
+            Math.min(selected, MAX_ICON_DOWNLOAD_BYTES)
         } else {
             DEFAULT_MAX_ICON_DOWNLOAD_BYTES
         }

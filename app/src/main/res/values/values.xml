@@ -107,6 +107,10 @@
     <string-array name="settings_notifications_auto_download_entries">
         <item>@string/settings_notifications_auto_download_never</item>
         <item>@string/settings_notifications_auto_download_always</item>
+        <item>@string/single_auto_download_images</item>
+        <item>@string/single_auto_download_audio</item>
+        <item>@string/single_auto_download_video</item>
+        <item>@string/single_auto_download_all_media</item>
         <item>@string/settings_notifications_auto_download_100k</item>
         <item>@string/settings_notifications_auto_download_500k</item>
         <item>@string/settings_notifications_auto_download_1m</item>
@@ -117,6 +121,10 @@
     <string-array name="settings_notifications_auto_download_values">
         <item>0</item>
         <item>1</item>
+        <item>-1001</item>
+        <item>-1002</item>
+        <item>-1003</item>
+        <item>-1004</item>
         <item>102400</item>
         <item>512000</item>
         <item>1048576</item>

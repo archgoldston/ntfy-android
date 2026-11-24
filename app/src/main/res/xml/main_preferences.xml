@@ -1,5 +1,48 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
                   app:title="@string/settings_title">
+    <PreferenceCategory app:title="@string/single_subscription_settings_title">
+        <Preference
+            app:key="single_topic_url"
+            app:title="@string/single_subscription_url_title"
+            app:summary="@string/single_subscription_url_summary" />
+        <EditTextPreference
+            app:key="single_subscription_display_name"
+            app:title="@string/detail_settings_appearance_display_name_title" />
+        <SwitchPreferenceCompat
+            app:key="single_subscription_channels"
+            app:title="@string/detail_settings_notifications_dedicated_channels_title" />
+        <Preference
+            app:key="single_subscription_open_channels"
+            app:title="@string/detail_settings_notifications_open_channels_title"
+            app:summary="@string/detail_settings_notifications_open_channels_summary" />
+        <Preference
+            app:key="single_subscription_icon_set"
+            app:title="@string/detail_settings_appearance_icon_set_title"
+            app:summary="@string/detail_settings_appearance_icon_set_summary" />
+        <Preference
+            app:key="single_subscription_icon_remove"
+            app:title="@string/detail_settings_appearance_icon_remove_title" />
+        <ListPreference
+            app:key="single_subscription_mute"
+            app:title="@string/settings_notifications_muted_until_title"
+            app:entries="@array/settings_notifications_muted_until_entries"
+            app:entryValues="@array/settings_notifications_muted_until_values" />
+        <ListPreference
+            app:key="single_subscription_priority"
+            app:title="@string/settings_notifications_min_priority_title"
+            app:entries="@array/detail_settings_notifications_min_priority_entries"
+            app:entryValues="@array/detail_settings_notifications_min_priority_values" />
+        <ListPreference
+            app:key="single_subscription_autodelete"
+            app:title="@string/settings_notifications_auto_delete_title"
+            app:entries="@array/detail_settings_notifications_auto_delete_entries"
+            app:entryValues="@array/detail_settings_notifications_auto_delete_values" />
+        <ListPreference
+            app:key="single_subscription_insistent"
+            app:title="@string/settings_notifications_insistent_max_priority_title"
+            app:entries="@array/detail_settings_notifications_insistent_max_priority_entries"
+            app:entryValues="@array/detail_settings_notifications_insistent_max_priority_values" />
+    </PreferenceCategory>
     <PreferenceCategory app:title="@string/settings_notifications_header">
         <ListPreference
                 app:key="@string/settings_notifications_muted_until_key"
@@ -18,7 +61,7 @@
                 app:title="@string/settings_notifications_auto_download_title"
                 app:entries="@array/settings_notifications_auto_download_entries"
                 app:entryValues="@array/settings_notifications_auto_download_values"
-                app:defaultValue="1"/>
+                app:defaultValue="-1001"/>
         <ListPreference
                 app:key="@string/settings_notifications_auto_delete_key"
                 app:title="@string/settings_notifications_auto_delete_title"

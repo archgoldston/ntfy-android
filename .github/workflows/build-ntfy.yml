@@ -1,0 +1,92 @@
+name: Build single F-Droid release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK 36
+        run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Build F-Droid release only
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleFdroidRelease --no-daemon
+
+      # Optional: for install-over-existing-APK updates, configure the four
+      # NTFY_KEYSTORE_* repository secrets. Otherwise a temporary CI signing
+      # key is generated and an update will require uninstalling the old APK.
+      - name: Prepare APK signing
+        shell: bash
+        env:
+          NTFY_KEYSTORE_BASE64: ${{ secrets.NTFY_KEYSTORE_BASE64 }}
+          NTFY_KEYSTORE_PASSWORD: ${{ secrets.NTFY_KEYSTORE_PASSWORD }}
+          NTFY_KEY_ALIAS: ${{ secrets.NTFY_KEY_ALIAS }}
+          NTFY_KEY_PASSWORD: ${{ secrets.NTFY_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$NTFY_KEYSTORE_BASE64" ]]; then
+            : "${NTFY_KEYSTORE_PASSWORD:?Missing NTFY_KEYSTORE_PASSWORD}"
+            : "${NTFY_KEY_ALIAS:?Missing NTFY_KEY_ALIAS}"
+            : "${NTFY_KEY_PASSWORD:?Missing NTFY_KEY_PASSWORD}"
+            printf '%s' "$NTFY_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/ntfy-signing.jks"
+            echo 'NTFY_KEYSTORE_PATH='"$RUNNER_TEMP/ntfy-signing.jks" >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_ALIAS='"$NTFY_KEY_ALIAS" >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_STORE_PASS='"$NTFY_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_KEY_PASS='"$NTFY_KEY_PASSWORD" >> "$GITHUB_ENV"
+          else
+            keytool -genkeypair -v -keystore "$RUNNER_TEMP/ntfy-signing.jks" \
+              -storepass android -keypass android -alias ntfy \
+              -keyalg RSA -keysize 3072 -validity 10000 \
+              -dname 'CN=ntfy Private Build, OU=Android, O=Personal, C=US'
+            echo 'NTFY_KEYSTORE_PATH='"$RUNNER_TEMP/ntfy-signing.jks" >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_ALIAS=ntfy' >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_STORE_PASS=android' >> "$GITHUB_ENV"
+            echo 'NTFY_SIGN_KEY_PASS=android' >> "$GITHUB_ENV"
+          fi
+
+      - name: Sign and verify one APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]+"([^"]+)".*/\1/p' app/build.gradle | head -n 1)"
+          [[ -n "$VERSION" ]] || { echo 'Could not find versionName'; exit 1; }
+          INPUT_APK="$(find app/build/outputs/apk/fdroid/release -maxdepth 1 -name '*-unsigned.apk' -type f | head -n 1)"
+          [[ -n "$INPUT_APK" ]] || { echo 'Unsigned F-Droid release APK not found'; exit 1; }
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          [[ -x "$APKSIGNER" ]] || { echo 'apksigner not found'; exit 1; }
+          mkdir -p dist
+          OUT="dist/ntfy-${VERSION}-fdroid-release.apk"
+          "$APKSIGNER" sign \
+            --ks "$NTFY_KEYSTORE_PATH" \
+            --ks-key-alias "$NTFY_SIGN_ALIAS" \
+            --ks-pass "env:NTFY_SIGN_STORE_PASS" \
+            --key-pass "env:NTFY_SIGN_KEY_PASS" \
+            --out "$OUT" "$INPUT_APK"
+          "$APKSIGNER" verify --verbose "$OUT"
+          [[ "$(find dist -maxdepth 1 -name '*.apk' -type f | wc -l)" -eq 1 ]]
+
+      - name: Upload only the final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ntfy-fdroid-release
+          path: dist/*.apk
+          if-no-files-found: error

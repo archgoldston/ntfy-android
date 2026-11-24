@@ -568,4 +568,14 @@
     <string name="client_certificate_dialog_error_wrong_password">Wrong password or invalid PKCS#12 file</string>
     <string name="client_certificate_dialog_error_invalid_p12_password">Invalid password or corrupted PKCS#12 file</string>
     <string name="client_certificate_dialog_error_invalid_url">Invalid service URL</string>
+    <!-- Single-topic client additions -->
+    <string name="single_auto_download_images">自动下载图片（不限大小）</string>
+    <string name="single_auto_download_audio">自动下载音频（不限大小）</string>
+    <string name="single_auto_download_video">自动下载视频（不限大小）</string>
+    <string name="single_auto_download_all_media">自动下载图片、音频、视频（不限大小）</string>
+    <string name="single_subscription_settings_title">订阅设置</string>
+    <string name="single_subscription_url_title">订阅地址（点击复制）</string>
+    <string name="single_subscription_url_summary">正在获取地址…</string>
+    <string name="single_floating_search">搜索消息</string>
+    <string name="single_floating_settings">设置和订阅地址</string>
 </resources>

@@ -63,7 +63,12 @@ class NotificationDispatcher(val context: Context, val repository: Repository) {
             Log.d(TAG, "Attachment already expired at ${attachment.expires}, not downloading")
             return false
         }
+        if (repository.isUnlimitedMediaDownload(attachment.name, attachment.type, attachment.url)) {
+            return true
+        }
         when (val maxAutoDownloadSize = repository.getAutoDownloadMaxSize()) {
+            Repository.AUTO_DOWNLOAD_IMAGES, Repository.AUTO_DOWNLOAD_AUDIO,
+            Repository.AUTO_DOWNLOAD_VIDEO, Repository.AUTO_DOWNLOAD_ALL_MEDIA -> return false
             Repository.AUTO_DOWNLOAD_ALWAYS -> return true
             Repository.AUTO_DOWNLOAD_NEVER -> return false
             else -> {
