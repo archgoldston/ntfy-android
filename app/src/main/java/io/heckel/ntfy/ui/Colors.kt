@@ -56,8 +56,9 @@ class Colors {
         }
 
         fun shouldUseLightStatusBar(dynamicColors: Boolean, darkMode: Boolean): Boolean {
-            // Use light status bar (dark icons) when dynamic colors are enabled in light mode
-            return dynamicColors && !darkMode
+            // Android 15/16 uses a surface-colored status-bar background regardless of
+            // dynamic color. Always draw dark icons in light mode, light icons in dark mode.
+            return !darkMode
         }
 
         fun toolbarTextColor(context: Context, dynamicColors: Boolean, darkMode: Boolean): Int {

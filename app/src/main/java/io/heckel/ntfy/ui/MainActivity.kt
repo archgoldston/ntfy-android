@@ -172,14 +172,7 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
             onSubscribeButtonClick()
         }
         
-        // Add bottom padding to FAB to account for navigation bar
-        ViewCompat.setOnApplyWindowInsetsListener(fab) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val layoutParams = view.layoutParams as androidx.constraintlayout.widget.ConstraintLayout.LayoutParams
-            layoutParams.bottomMargin = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0
-            view.layoutParams = layoutParams
-            insets
-        }
+        // The common root inset helper keeps controls above the navigation bar.
 
         // Swipe to refresh
         mainListContainer = findViewById(R.id.main_subscriptions_list_container)
@@ -203,13 +196,8 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
         )
         mainList.adapter = adapter
         
-        // Apply window insets to ensure content is not covered by navigation bar
+        // Avoid applying a second bottom inset inside the already-inset root.
         mainList.clipToPadding = false
-        ViewCompat.setOnApplyWindowInsetsListener(mainList) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(bottom = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0)
-            insets
-        }
 
         viewModel.list().observe(this) {
             it?.let { subscriptions ->

@@ -310,13 +310,8 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         mainList = findViewById(R.id.detail_notification_list)
         mainList.adapter = adapter
         
-        // Apply window insets to ensure content is not covered by navigation bar
+        // The activity root now owns the bottom system-bar inset; avoid double padding.
         mainList.clipToPadding = false
-        ViewCompat.setOnApplyWindowInsetsListener(mainList) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(bottom = if (Build.VERSION.SDK_INT >= 35) systemBars.bottom else 0)
-            insets
-        }
 
         // Observe filtered notifications (filtered by search query)
         val noSearchResultsText: TextView = findViewById(R.id.detail_no_notifications_text)
@@ -438,14 +433,8 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         findViewById<View>(R.id.single_settings_fab).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        val controls = findViewById<View>(R.id.single_fab_stack)
-        ViewCompat.setOnApplyWindowInsetsListener(controls) { view, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val lp = view.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.bottomMargin = (if (Build.VERSION.SDK_INT >= 35) bars.bottom else 0) + (20 * resources.displayMetrics.density).toInt()
-            view.layoutParams = lp
-            insets
-        }
+        // The two floating controls remain 20dp above the usable screen bottom.
+        // StatusBarInsets handles the navigation bar on Android 15/16.
     }
 
     private fun setupPublishUI() {
