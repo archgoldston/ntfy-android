@@ -195,6 +195,9 @@
     <string name="detail_test_message_error_too_large">無法傳送訊息：附件大小超出限制。</string>
     <string name="detail_instant_delivery_disabled">關閉即時傳送</string>
     <string name="detail_item_snack_deleted">已刪除通知</string>
+    <string name="detail_item_menu_delete_notification">刪除此則訊息</string>
+    <string name="detail_item_delete_notification_confirm_message">確定刪除手機上的這一則訊息嗎？不會刪除訂閱主題或伺服器上的訊息。</string>
+    <string name="detail_item_delete_notification_confirm">刪除</string>
     <string name="detail_item_menu_open">開啟檔案</string>
     <string name="detail_item_menu_delete">刪除檔案</string>
     <string name="detail_item_menu_cancel">取消下載</string>

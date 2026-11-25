@@ -48,7 +48,7 @@ import kotlinx.coroutines.launch
 import me.saket.bettermovementmethod.BetterLinkMovementMethod
 import androidx.core.net.toUri
 
-class DetailAdapter(private val activity: Activity, private val lifecycleScope: CoroutineScope, private val repository: Repository, private val onClick: (Notification) -> Unit, private val onLongClick: (Notification) -> Unit) :
+class DetailAdapter(private val activity: Activity, private val lifecycleScope: CoroutineScope, private val repository: Repository, private val onClick: (Notification) -> Unit, private val onLongClick: (Notification) -> Unit, private val onDelete: (Notification) -> Unit) :
     ListAdapter<Notification, DetailAdapter.DetailViewHolder>(TopicDiffCallback) {
     private val markwon: Markwon = MarkwonFactory.createForMessage(activity)
     val selected = mutableSetOf<String>() // Notification IDs
@@ -57,7 +57,7 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DetailViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.fragment_detail_item, parent, false)
-        return DetailViewHolder(activity, lifecycleScope, repository, markwon, view, selected, onClick, onLongClick)
+        return DetailViewHolder(activity, lifecycleScope, repository, markwon, view, selected, onClick, onLongClick, onDelete)
     }
 
     /* Gets current topic and uses it to bind view. */
@@ -92,7 +92,8 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
         itemView: View,
         private val selected: Set<String>,
         val onClick: (Notification) -> Unit,
-        val onLongClick: (Notification) -> Unit
+        val onLongClick: (Notification) -> Unit,
+        val onDelete: (Notification) -> Unit
     ) :
         RecyclerView.ViewHolder(itemView) {
         private var notification: Notification? = null
@@ -305,11 +306,13 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             val hasClickLink = notification.click != ""
             val downloadItem = popup.menu.findItem(R.id.detail_item_menu_download)
             val cancelItem = popup.menu.findItem(R.id.detail_item_menu_cancel)
+            val deleteNotificationItem = popup.menu.findItem(R.id.detail_item_menu_delete_notification)
             val openItem = popup.menu.findItem(R.id.detail_item_menu_open)
             val deleteItem = popup.menu.findItem(R.id.detail_item_menu_delete)
             val saveFileItem = popup.menu.findItem(R.id.detail_item_menu_save_file)
             val copyUrlItem = popup.menu.findItem(R.id.detail_item_menu_copy_url)
             val copyContentsItem = popup.menu.findItem(R.id.detail_item_menu_copy_contents)
+            deleteNotificationItem.setOnMenuItemClickListener { onDelete(notification); true }
             val expired = attachment?.expires != null && attachment.expires < System.currentTimeMillis()/1000
             val inProgress = attachment?.progress in 0..99
             if (attachment != null) {
@@ -334,7 +337,7 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             copyContentsItem.isVisible = notification.click != ""
             val noOptions = !openItem.isVisible && !saveFileItem.isVisible && !downloadItem.isVisible
                     && !copyUrlItem.isVisible && !cancelItem.isVisible && !deleteItem.isVisible
-                    && !copyContentsItem.isVisible
+                    && !copyContentsItem.isVisible && !deleteNotificationItem.isVisible
             if (noOptions) {
                 return null
             }

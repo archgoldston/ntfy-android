@@ -181,6 +181,9 @@
     <string name="detail_item_tags">Tags: %1$s</string>
     <string name="detail_item_snack_deleted">Notification deleted</string>
     <string name="detail_item_snack_undo">Undo</string>
+    <string name="detail_item_menu_delete_notification">Delete this message</string>
+    <string name="detail_item_delete_notification_confirm_message">Delete only this message from this device? The subscription and server messages will not be affected.</string>
+    <string name="detail_item_delete_notification_confirm">Delete</string>
     <string name="detail_item_menu_open">Open file</string>
     <string name="detail_item_menu_delete">Delete file</string>
     <string name="detail_item_menu_download">Download file</string>

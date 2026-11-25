@@ -299,6 +299,9 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         // Swipe to refresh
         mainListContainer = findViewById(R.id.detail_notification_list_container)
         mainListContainer.setOnRefreshListener { refresh() }
+        // Require a deliberate pull (200dp) to refresh; a short overscroll when
+        // scrolling quickly back to the top must not start network syncing.
+        mainListContainer.setDistanceToTriggerSync((200f * resources.displayMetrics.density).toInt())
         mainListContainer.setColorSchemeColors(Colors.swipeToRefreshColor(this))
 
         // Update main list based on viewModel (& its datasource/livedata)
@@ -306,7 +309,7 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         val onNotificationClick = { n: Notification -> onNotificationClick(n) }
         val onNotificationLongClick = { n: Notification -> onNotificationLongClick(n) }
 
-        adapter = DetailAdapter(this, lifecycleScope, repository, onNotificationClick, onNotificationLongClick)
+        adapter = DetailAdapter(this, lifecycleScope, repository, onNotificationClick, onNotificationLongClick, ::onDeleteNotificationClick)
         mainList = findViewById(R.id.detail_notification_list)
         mainList.adapter = adapter
         
@@ -979,6 +982,22 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
                 copyToClipboard(this, "notification", decodeMessage(notification))
             }
         }
+    }
+
+    // This removes only the selected message from the local notification list.
+    // It does not unsubscribe the topic or delete anything on the ntfy server.
+    private fun onDeleteNotificationClick(notification: Notification) {
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setMessage(R.string.detail_item_delete_notification_confirm_message)
+            .setPositiveButton(R.string.detail_item_delete_notification_confirm) { _, _ ->
+                viewModel.markAsDeleted(notification.id)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).dangerButton()
+        }
+        dialog.show()
     }
 
     private fun onNotificationLongClick(notification: Notification) {

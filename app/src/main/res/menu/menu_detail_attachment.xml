@@ -2,6 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/detail_item_menu_download" android:title="@string/detail_item_menu_download"/>
     <item android:id="@+id/detail_item_menu_cancel" android:title="@string/detail_item_menu_cancel"/>
+    <item android:id="@+id/detail_item_menu_delete_notification" android:title="@string/detail_item_menu_delete_notification"/>
     <item android:id="@+id/detail_item_menu_open" android:title="@string/detail_item_menu_open"/>
     <item android:id="@+id/detail_item_menu_delete" android:title="@string/detail_item_menu_delete"/>
     <item android:id="@+id/detail_item_menu_save_file" android:title="@string/detail_item_menu_save_file"/>

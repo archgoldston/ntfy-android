@@ -436,7 +436,9 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
     }
 
     fun getMessageBarEnabled(): Boolean {
-        return sharedPrefs.getBoolean(SHARED_PREFS_MESSAGE_BAR_ENABLED, true) // Enabled by default
+        // Single-topic receiver never displays a publishing/message bar,
+        // including after upgrading from an installation where it was enabled.
+        return false
     }
 
     fun setMessageBarEnabled(enabled: Boolean) {

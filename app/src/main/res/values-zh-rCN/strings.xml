@@ -75,6 +75,9 @@
     <string name="detail_item_tags">标签：%1$s</string>
     <string name="detail_item_snack_deleted">通知已删除</string>
     <string name="detail_item_snack_undo">撤销</string>
+    <string name="detail_item_menu_delete_notification">删除此条信息</string>
+    <string name="detail_item_delete_notification_confirm_message">确定删除手机上这一条信息吗？不会删除订阅主题或服务器上的消息。</string>
+    <string name="detail_item_delete_notification_confirm">删除</string>
     <string name="detail_item_menu_open">打开文件</string>
     <string name="detail_item_menu_delete">删除文件</string>
     <string name="detail_item_menu_cancel">不再下载</string>
