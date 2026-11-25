@@ -331,6 +331,11 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
                 ).filter { it.isNotBlank() }.distinct().joinToString("\n")
                 if (content.isNotBlank()) {
                     copyToClipboard(context, "notification", content)
+                    // copyToClipboard intentionally skips its own Toast on Android 13+.
+                    // Match Settings > Delete all's bottom, auto-dismiss notification.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        Toast.makeText(activity, R.string.common_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                    }
                 }
                 true
             }

@@ -1022,6 +1022,10 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
             runOnUiThread {
                 copyToClipboard(this@DetailActivity, "notifications", content)
                 finishActionMode()
+                // Keep the existing short system Toast behavior used in Settings.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Toast.makeText(this@DetailActivity, R.string.common_copied_to_clipboard, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
