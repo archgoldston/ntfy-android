@@ -166,102 +166,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         private lateinit var serviceManager: SubscriberServiceManager
         private var autoDownloadSelection = AUTO_DOWNLOAD_SELECTION_NOT_SET
 
-        // Android 8+ owns sound, vibration, heads-up and persistent-service channel settings.
-        // Avoid pretend toggles: jump to the OS controls, then reflect the real state on return.
-        private fun openAlertSystemSettings(channelId: String?) {
-            val pkg = requireContext().packageName
-            val appIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                .putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
-            if (channelId != null) {
-                val manager = requireContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                    as android.app.NotificationManager
-                if (manager.getNotificationChannel(channelId) != null) {
-                    try {
-                        startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
-                            .putExtra(Settings.EXTRA_CHANNEL_ID, channelId))
-                        return
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        // Some vendor ROMs only provide the app notification page.
-                    }
-                }
-            }
-            startActivity(appIntent)
-        }
-
-        private fun refreshAlertControls() {
-            if (!isAdded) return
-            val ctx = requireContext()
-            val mgr = ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                as android.app.NotificationManager
-            val local = ctx.getSharedPreferences("ntfy_alert_controls", android.content.Context.MODE_PRIVATE)
-            findPreference<SwitchPreferenceCompat>("alert_new_message")?.isChecked =
-                local.getBoolean("new_message_notifications", true)
-            findPreference<SwitchPreferenceCompat>("alert_connection")?.isChecked =
-                repository.getConnectionAlertSeconds() > 0L
-            val persistent = mgr.getNotificationChannel("ntfy-subscriber")
-            findPreference<SwitchPreferenceCompat>("alert_persistent")?.isChecked =
-                mgr.areNotificationsEnabled() &&
-                    (persistent == null || persistent.importance != android.app.NotificationManager.IMPORTANCE_NONE)
-            // Check the default-priority channel. Other priorities may use distinct channels.
-            val channel = mgr.getNotificationChannel("ntfy")
-            findPreference<SwitchPreferenceCompat>("alert_sound")?.isChecked = channel?.sound != null
-            findPreference<SwitchPreferenceCompat>("alert_vibration")?.isChecked = channel?.shouldVibrate() == true
-            findPreference<SwitchPreferenceCompat>("alert_popup")?.isChecked =
-                (channel?.importance ?: android.app.NotificationManager.IMPORTANCE_DEFAULT) >= android.app.NotificationManager.IMPORTANCE_HIGH
-            findPreference<SwitchPreferenceCompat>("alert_lockscreen")?.isChecked =
-                channel?.lockscreenVisibility != android.app.Notification.VISIBILITY_SECRET
-        }
-
-        private fun setupAlertControls() {
-            val ctx = requireContext()
-            val local = ctx.getSharedPreferences("ntfy_alert_controls", android.content.Context.MODE_PRIVATE)
-            findPreference<SwitchPreferenceCompat>("alert_new_message")?.apply {
-                isPersistent = false
-                setOnPreferenceChangeListener { _, next ->
-                    local.edit().putBoolean("new_message_notifications", next as Boolean).apply()
-                    true
-                }
-            }
-            findPreference<SwitchPreferenceCompat>("alert_connection")?.apply {
-                isPersistent = false
-                setOnPreferenceChangeListener { _, next ->
-                    if (next as Boolean) {
-                        val previous = local.getLong("connection_last_seconds", 300L).coerceAtLeast(60L)
-                        repository.setConnectionAlertSeconds(previous)
-                    } else {
-                        val previous = repository.getConnectionAlertSeconds()
-                        if (previous > 0L) local.edit().putLong("connection_last_seconds", previous).apply()
-                        repository.setConnectionAlertSeconds(0L)
-                    }
-                    findPreference<ListPreference>(ctx.getString(R.string.settings_advanced_connection_alert_key))?.value =
-                        repository.getConnectionAlertSeconds().toString()
-                    true
-                }
-            }
-            for ((key, channel) in listOf(
-                "alert_persistent" to "ntfy-subscriber",
-                "alert_sound" to "ntfy",
-                "alert_vibration" to "ntfy",
-                "alert_popup" to "ntfy",
-                "alert_lockscreen" to null
-            )) {
-                findPreference<SwitchPreferenceCompat>(key)?.apply {
-                    isPersistent = false
-                    setOnPreferenceChangeListener { _, _ ->
-                        // The user changes the real channel switch on the system page.
-                        openAlertSystemSettings(channel)
-                        false
-                    }
-                }
-            }
-            refreshAlertControls()
-        }
-
-        override fun onResume() {
-            super.onResume()
-            if (this::repository.isInitialized) refreshAlertControls()
-        }
         private fun setupSingleSubscriptionPreferences() {
             val urlPref = findPreference<Preference>("single_topic_url")
             val priorityPref = findPreference<ListPreference>("single_subscription_priority")
@@ -440,7 +344,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             serviceManager = SubscriberServiceManager(requireActivity())
             autoDownloadSelection = repository.getAutoDownloadMaxSize() // Only used for <= Android P, due to permissions request
             setupSingleSubscriptionPreferences()
-            setupAlertControls()
 
             // Important note: We do not use the default shared prefs to store settings. Every
             // preferenceDataStore is overridden to use the repository. This is convenient, because

@@ -44,36 +44,6 @@
             app:summary="@string/single_clear_all_messages_summary" />
     </PreferenceCategory>
     <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_notifications_header">
-        <!-- Reminder controls: system-owned notification channel switches open Android settings. -->
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_new_message"
-            app:title="新消息通知"
-            app:summary="关闭后仍接收和保存消息，只是不弹出新消息通知"
-            app:defaultValue="true" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_persistent"
-            app:title="显示常驻监听通知"
-            app:summary="点击进入安卓系统设置，不影响后台订阅" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_connection"
-            app:title="连接异常提醒"
-            app:summary="当订阅连接持续异常时提醒；开启时默认延迟5分钟" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_sound"
-            app:title="通知声音"
-            app:summary="点击进入系统通知渠道设置；不同优先级可能有不同声音" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_vibration"
-            app:title="通知振动"
-            app:summary="点击进入系统通知渠道设置；不同优先级单独控制" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_popup"
-            app:title="横幅弹出提醒"
-            app:summary="由系统通知重要级别决定，点击进入系统设置" />
-        <SwitchPreferenceCompat app:iconSpaceReserved="false"
-            app:key="alert_lockscreen"
-            app:title="锁屏显示通知"
-            app:summary="由安卓锁屏通知隐私设置决定，点击进入系统设置" />
         <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_muted_until_key"
                 app:title="@string/settings_notifications_muted_until_title"
