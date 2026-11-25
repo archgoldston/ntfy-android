@@ -1,171 +1,171 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
                   app:title="@string/settings_title">
-    <PreferenceCategory app:title="@string/single_subscription_settings_title">
-        <Preference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/single_subscription_settings_title">
+        <Preference app:iconSpaceReserved="false"
             app:key="single_topic_url"
             app:title="@string/single_subscription_url_title"
             app:summary="@string/single_subscription_url_summary" />
-        <EditTextPreference
+        <EditTextPreference app:iconSpaceReserved="false"
             app:key="single_subscription_display_name"
             app:title="@string/detail_settings_appearance_display_name_title" />
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
             app:key="single_subscription_channels"
             app:title="@string/detail_settings_notifications_dedicated_channels_title" />
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="single_subscription_open_channels"
             app:title="@string/detail_settings_notifications_open_channels_title"
             app:summary="@string/detail_settings_notifications_open_channels_summary" />
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="single_subscription_icon_set"
             app:title="@string/detail_settings_appearance_icon_set_title"
             app:summary="@string/detail_settings_appearance_icon_set_summary" />
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="single_subscription_icon_remove"
             app:title="@string/detail_settings_appearance_icon_remove_title" />
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
             app:key="single_subscription_priority"
             app:title="@string/settings_notifications_min_priority_title"
             app:entries="@array/detail_settings_notifications_min_priority_entries"
             app:entryValues="@array/detail_settings_notifications_min_priority_values" />
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
             app:key="single_subscription_autodelete"
             app:title="@string/settings_notifications_auto_delete_title"
             app:entries="@array/detail_settings_notifications_auto_delete_entries"
             app:entryValues="@array/detail_settings_notifications_auto_delete_values" />
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
             app:key="single_subscription_insistent"
             app:title="@string/settings_notifications_insistent_max_priority_title"
             app:entries="@array/detail_settings_notifications_insistent_max_priority_entries"
             app:entryValues="@array/detail_settings_notifications_insistent_max_priority_values" />
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="single_subscription_clear_all"
             app:title="@string/single_clear_all_messages_title"
             app:summary="@string/single_clear_all_messages_summary" />
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_notifications_header">
-        <ListPreference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_notifications_header">
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_muted_until_key"
                 app:title="@string/settings_notifications_muted_until_title"
                 app:entries="@array/settings_notifications_muted_until_entries"
                 app:entryValues="@array/settings_notifications_muted_until_values"
                 app:defaultValue="0"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
             app:key="@string/settings_notifications_min_priority_key"
             app:title="@string/settings_notifications_min_priority_title"
             app:entries="@array/settings_notifications_min_priority_entries"
             app:entryValues="@array/settings_notifications_min_priority_values"
             app:defaultValue="1"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_auto_download_key"
                 app:title="@string/settings_notifications_auto_download_title"
                 app:entries="@array/settings_notifications_auto_download_entries"
                 app:entryValues="@array/settings_notifications_auto_download_values"
                 app:defaultValue="-1001"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_auto_delete_key"
                 app:title="@string/settings_notifications_auto_delete_title"
                 app:entries="@array/settings_notifications_auto_delete_entries"
                 app:entryValues="@array/settings_notifications_auto_delete_values"
                 app:defaultValue="2592000"/>
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_insistent_max_priority_key"
                 app:title="@string/settings_notifications_insistent_max_priority_title"
                 app:defaultValue="false"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_notifications_channel_prefs_key"
                 app:title="@string/settings_notifications_channel_prefs_title"
                 app:summary="@string/settings_notifications_channel_prefs_summary"/>
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_general_header">
-        <Preference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_general_header">
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_general_default_base_url_key"
                 app:title="@string/settings_general_default_base_url_title" />
-        <Preference
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_general_users_key"
                 app:title="@string/settings_general_users_title"
                 app:summary="@string/settings_general_users_summary"
                 app:fragment="io.heckel.ntfy.ui.SettingsActivity$UserSettingsFragment"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_general_language_key"
                 app:title="@string/settings_general_language_title"/>
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_appearance_header">
-        <ListPreference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_appearance_header">
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_general_dark_mode_key"
                 app:title="@string/settings_general_dark_mode_title"
                 app:entries="@array/settings_general_dark_mode_entries"
                 app:entryValues="@array/settings_general_dark_mode_values"
                 app:defaultValue="-1"/>
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
                 app:key="@string/settings_general_dynamic_colors_key"
                 app:title="@string/settings_general_dynamic_colors_title"
                 app:isPreferenceVisible="false"/>
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_backup_restore_header">
-        <ListPreference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_backup_restore_header">
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_backup_restore_backup_key"
                 app:title="@string/settings_backup_restore_backup_title"
                 app:summary="@string/settings_backup_restore_backup_summary"
                 app:entries="@array/settings_backup_restore_backup_entries"
                 app:entryValues="@array/settings_backup_restore_backup_values"
                 app:defaultValue="everything"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_backup_restore_restore_key"
                 app:title="@string/settings_backup_restore_restore_title"
                 app:summary="@string/settings_backup_restore_restore_summary"/>
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_advanced_header">
-        <ListPreference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_advanced_header">
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_advanced_connection_alert_key"
                 app:title="@string/settings_advanced_connection_alert_title"
                 app:entries="@array/settings_advanced_connection_alert_entries"
                 app:entryValues="@array/settings_advanced_connection_alert_values"
                 app:defaultValue="0"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_advanced_connection_protocol_key"
                 app:title="@string/settings_advanced_connection_protocol_title"
                 app:entries="@array/settings_advanced_connection_protocol_entries"
                 app:entryValues="@array/settings_advanced_connection_protocol_values"
                 app:defaultValue="jsonhttp"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="@string/settings_advanced_exact_alarms_key"
             app:title="@string/settings_advanced_exact_alarms_title"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="@string/settings_advanced_custom_headers_key"
             app:title="@string/settings_advanced_custom_headers_title"
             app:summary="@string/settings_advanced_custom_headers_summary"
             app:fragment="io.heckel.ntfy.ui.SettingsActivity$CustomHeaderSettingsFragment"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
             app:key="@string/settings_advanced_certificates_key"
             app:title="@string/settings_advanced_certificates_title"
             app:summary="@string/settings_advanced_certificates_summary"
             app:fragment="io.heckel.ntfy.ui.CertificateSettingsFragment"/>
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
             app:key="@string/settings_advanced_broadcast_key"
             app:title="@string/settings_advanced_broadcast_title"
             app:enabled="true"/>
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
             app:key="@string/settings_advanced_unifiedpush_key"
             app:title="@string/settings_advanced_unifiedpush_title"
             app:enabled="true"/>
-        <SwitchPreferenceCompat
+        <SwitchPreferenceCompat app:iconSpaceReserved="false"
                 app:key="@string/settings_advanced_record_logs_key"
                 app:title="@string/settings_advanced_record_logs_title"
                 app:enabled="true"/>
-        <ListPreference
+        <ListPreference app:iconSpaceReserved="false"
                 app:key="@string/settings_advanced_export_logs_key"
                 app:title="@string/settings_advanced_export_logs_title"
                 app:summary="@string/settings_advanced_export_logs_summary"
                 app:entries="@array/settings_advanced_export_logs_entries"
                 app:entryValues="@array/settings_advanced_export_logs_values"
                 app:defaultValue="copy"/>
-        <Preference
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_advanced_clear_logs_key"
                 app:title="@string/settings_advanced_clear_logs_title"
                 app:summary="@string/settings_advanced_clear_logs_summary"/>
     </PreferenceCategory>
-    <PreferenceCategory app:title="@string/settings_about_header">
-        <Preference
+    <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_about_header">
+        <Preference app:iconSpaceReserved="false"
                 app:key="@string/settings_about_version_key"
                 app:title="@string/settings_about_version_title"/>
     </PreferenceCategory>
