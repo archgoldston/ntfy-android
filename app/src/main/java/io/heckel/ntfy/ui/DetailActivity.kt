@@ -977,10 +977,6 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
                         .show()
                 }
             }
-        } else {
-            runOnUiThread {
-                copyToClipboard(this, "notification", decodeMessage(notification))
-            }
         }
     }
 
