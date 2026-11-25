@@ -87,7 +87,9 @@ class NotificationDispatcher(val context: Context, val repository: Repository) {
         return notification.event == ApiService.EVENT_MESSAGE_CLEAR || notification.event == ApiService.EVENT_MESSAGE_DELETE
     }
 
-    private fun shouldNotify(subscription: Subscription, notification: Notification, muted: Boolean): Boolean {
+    private fun shouldNotify(subscription: Subscription, notification: Notification, muted: Boolean): Boolean {        // This controls message alerts only, never message receipt, persistence, or attachments.
+        if (!context.getSharedPreferences("ntfy_alert_controls", Context.MODE_PRIVATE)
+                .getBoolean("new_message_notifications", true)) return false
         if (subscription.upAppId != null || notification.event != ApiService.EVENT_MESSAGE) {
             return false
         }
