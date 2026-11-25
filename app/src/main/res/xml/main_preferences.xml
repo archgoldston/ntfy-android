@@ -5,9 +5,6 @@
             app:key="single_topic_url"
             app:title="@string/single_subscription_url_title"
             app:summary="@string/single_subscription_url_summary" />
-        <EditTextPreference app:iconSpaceReserved="false"
-            app:key="single_subscription_display_name"
-            app:title="@string/detail_settings_appearance_display_name_title" />
         <SwitchPreferenceCompat app:iconSpaceReserved="false"
             app:key="single_subscription_channels"
             app:title="@string/detail_settings_notifications_dedicated_channels_title" />
