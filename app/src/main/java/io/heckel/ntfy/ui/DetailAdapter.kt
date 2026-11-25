@@ -2,14 +2,20 @@ package io.heckel.ntfy.ui
 
 import android.Manifest
 import android.app.Activity
+import android.app.Dialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.util.Linkify
 import android.view.LayoutInflater
+import android.view.Gravity
+import android.view.ScaleGestureDetector
+import android.view.MotionEvent
+import android.view.WindowManager
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -25,7 +31,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
-import com.stfalcon.imageviewer.StfalconImageViewer
 import io.heckel.ntfy.R
 import io.heckel.ntfy.db.*
 import io.heckel.ntfy.msg.DownloadAttachmentWorker
@@ -206,7 +211,7 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             val attachment = notification.attachment
             val image = attachment.contentUri != null && supportedImage(attachment.type) && previewableImage(attachmentFileStat)
             val bitmap = if (image) attachment.contentUri.readBitmapFromUriOrNull(context) else null
-            maybeRenderAttachmentImage(context, bitmap, attachment)
+            maybeRenderAttachmentImage(bitmap, attachment)
             maybeRenderAttachmentBox(context, notification, attachment, attachmentFileStat, bitmap)
         }
 
@@ -383,26 +388,101 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             }
         }
 
-        private fun maybeRenderAttachmentImage(context: Context, bitmap: Bitmap?, attachment: Attachment) {
+        private fun maybeRenderAttachmentImage(bitmap: Bitmap?, attachment: Attachment) {
             if (bitmap == null) {
+                // RecyclerView recycles holders: clear any pending old image request, too.
+                Glide.with(activity).clear(attachmentImageView)
+                attachmentImageView.setImageDrawable(null)
+                attachmentImageView.setOnClickListener(null)
                 attachmentImageView.visibility = View.GONE
                 return
             }
-            try {
-                Glide.with(context).load(attachment.contentUri).fitCenter().into(attachmentImageView)
-                attachmentImageView.setOnClickListener {
-                    StfalconImageViewer.Builder<Any?>(context, listOf(bitmap)) { imageView, _ ->
-                        Glide.with(context).load(attachment.contentUri).into(imageView)
-                    }
-                        .allowZooming(true)
-                        .withTransitionFrom(attachmentImageView)
-                        .withHiddenStatusBar(false)
-                        .show()
-                }
-                attachmentImageView.visibility = View.VISIBLE
-            } catch (_: Exception) {
-                attachmentImageView.visibility = View.GONE
+            // Never hide the thumbnail for a shared-element transition. That could leave
+            // a blank image slot when the viewer closes or the holder is recycled.
+            Glide.with(activity).load(attachment.contentUri).fitCenter().into(attachmentImageView)
+            attachmentImageView.setOnClickListener {
+                showAttachmentImage(bitmap)
             }
+            attachmentImageView.visibility = View.VISIBLE
+        }
+
+        /** An independent fullscreen viewer, not a shared-element transition.
+         * Tapping the black background (or pressing Back) dismisses it; the RecyclerView
+         * thumbnail is never hidden, so its height and contents stay intact.
+         */
+        private fun showAttachmentImage(bitmap: Bitmap) {
+            val context = activity
+            val dialog = Dialog(context)
+            val backdrop = FrameLayout(context).apply {
+                setBackgroundColor(Color.BLACK)
+                setOnClickListener { dialog.dismiss() }
+                clipChildren = false
+            }
+            val picture = ImageView(context).apply {
+                setImageBitmap(bitmap)
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                contentDescription = "图片预览"
+                val screen = context.resources.displayMetrics
+                maxWidth = screen.widthPixels
+                maxHeight = screen.heightPixels
+                isClickable = true
+            }
+
+            // Preserve basic pinch zoom and one-finger panning without altering the
+            // original list thumbnail or depending on shared-view animation state.
+            var lastX = 0f
+            var lastY = 0f
+            val zoom = ScaleGestureDetector(context,
+                object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    override fun onScale(detector: ScaleGestureDetector): Boolean {
+                        val next = (picture.scaleX * detector.scaleFactor).coerceIn(1f, 5f)
+                        picture.scaleX = next
+                        picture.scaleY = next
+                        if (next <= 1f) {
+                            picture.translationX = 0f
+                            picture.translationY = 0f
+                        }
+                        return true
+                    }
+                })
+            picture.setOnTouchListener { _, event ->
+                zoom.onTouchEvent(event)
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_UP -> {
+                        lastX = event.rawX
+                        lastY = event.rawY
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (!zoom.isInProgress && event.pointerCount == 1 && picture.scaleX > 1f) {
+                            val limitX = (picture.width * (picture.scaleX - 1f)) / 2f
+                            val limitY = (picture.height * (picture.scaleY - 1f)) / 2f
+                            picture.translationX = (picture.translationX + event.rawX - lastX)
+                                .coerceIn(-limitX, limitX)
+                            picture.translationY = (picture.translationY + event.rawY - lastY)
+                                .coerceIn(-limitY, limitY)
+                        }
+                        lastX = event.rawX
+                        lastY = event.rawY
+                    }
+                }
+                true
+            }
+            backdrop.addView(picture, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            ))
+            dialog.setContentView(backdrop, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ))
+            dialog.window?.setBackgroundDrawableResource(android.R.color.black)
+            dialog.show()
+            dialog.window?.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
         }
 
         private fun openFile(context: Context, attachment: Attachment): Boolean {

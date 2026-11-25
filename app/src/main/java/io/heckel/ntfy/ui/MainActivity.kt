@@ -134,8 +134,32 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
         }
     }
 
+    // This activity remains the launcher/router for compatibility with existing
+    // notification PendingIntents, but it must never draw the old topics list.
+    private var routingToSingleTopic = false
+
+    private fun launchSingleTopicWithoutList(): Boolean {
+        // MainActivity exists only for legacy links, notifications and bootstrapping.
+        // Do not inflate activity_main, even for one frame.
+        routingToSingleTopic = true
+        Log.init(this)
+        workManager = WorkManager.getInstance(this)
+        dispatcher = NotificationDispatcher(this, repository)
+        appBaseUrl = getString(R.string.app_base_url)
+        dispatcher?.init()
+        messenger.subscribe(ApiService.CONTROL_TOPIC)
+        AppCompatDelegate.setDefaultNightMode(repository.getDarkMode())
+        schedulePeriodicPollWorker()
+        schedulePeriodicServiceRestartWorker()
+        schedulePeriodicDeleteWorker()
+        maybeRequestNotificationPermission()
+        openOnlySubscription()
+        return true
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (launchSingleTopicWithoutList()) return
         setContentView(R.layout.activity_main)
         keepContentBelowStatusBar()
 
@@ -428,6 +452,7 @@ class MainActivity : AppCompatActivity(), AddFragment.SubscribeListener, Notific
 
     override fun onResume() {
         super.onResume()
+        if (routingToSingleTopic) return
         showHideNotificationMenuItems()
         showHideConnectionErrorMenuItem(repository.getConnectionDetails())
         showHideNoNetworkBanner()
