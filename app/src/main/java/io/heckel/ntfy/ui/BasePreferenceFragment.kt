@@ -22,6 +22,18 @@ abstract class BasePreferenceFragment : PreferenceFragmentCompat() {
         // Apply window insets to ensure content is not covered by navigation bar
         listView?.let { recyclerView ->
             recyclerView.clipToPadding = false
+            // The main settings list has no icon column. Add one small, fixed inset
+            // so its original 16dp left gap becomes approximately 32dp.
+            // Keep sub-settings screens unchanged.
+            if (this is SettingsActivity.SettingsFragment) {
+                val extraStart = (16f * resources.displayMetrics.density + 0.5f).toInt()
+                recyclerView.setPaddingRelative(
+                    recyclerView.paddingStart + extraStart,
+                    recyclerView.paddingTop,
+                    recyclerView.paddingEnd,
+                    recyclerView.paddingBottom
+                )
+            }
             ViewCompat.setOnApplyWindowInsetsListener(recyclerView) { v, insets ->
                 val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
                 v.updatePadding(bottom = systemBars.bottom)
