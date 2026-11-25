@@ -177,6 +177,11 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             val iconSetPref = findPreference<Preference>("single_subscription_icon_set")
             val iconRemovePref = findPreference<Preference>("single_subscription_icon_remove")
             val clearAllPref = findPreference<Preference>("single_subscription_clear_all")
+            val trashPref = findPreference<Preference>("single_subscription_trash")
+            trashPref?.setOnPreferenceClickListener {
+                startActivity(Intent(requireContext(), TrashActivity::class.java))
+                true
+            }
             var singleId = 0L
             val iconPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { picked ->
                 if (picked != null && singleId != 0L) {
@@ -192,8 +197,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                                 repository.updateSubscription(it.copy(icon = iconUri.toString()))
                             }
                             withContext(Dispatchers.Main) {
-                                iconSetPref?.isVisible = false
-                                iconRemovePref?.isVisible = true
+                                iconRemovePref?.isEnabled = true
                             }
                         } catch (e: Exception) {
                             Log.w("SingleTopicSettings", "Cannot set subscription icon", e)
@@ -225,9 +229,8 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 insistentPref?.value = sub.insistent.toString()
                 namePref?.text = sub.displayName.orEmpty()
                 channelsPref?.isChecked = sub.dedicatedChannels
-                openChannelsPref?.isVisible = sub.dedicatedChannels
-                iconSetPref?.isVisible = sub.icon == null
-                iconRemovePref?.isVisible = sub.icon != null
+                openChannelsPref?.isEnabled = sub.dedicatedChannels
+                iconRemovePref?.isEnabled = sub.icon != null
 
                 namePref?.setOnPreferenceChangeListener { _, value ->
                     val newName = value.toString().takeIf { it.isNotBlank() }
@@ -253,7 +256,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                             else notifications.deleteSubscriptionNotificationChannels(updated)
                         }
                     }
-                    openChannelsPref?.isVisible = enabled
+                    openChannelsPref?.isEnabled = enabled
                     true
                 }
                 openChannelsPref?.setOnPreferenceClickListener {
@@ -277,8 +280,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                             }
                         }
                     }
-                    iconRemovePref?.isVisible = false
-                    iconSetPref?.isVisible = true
+                    iconRemovePref?.isEnabled = false
                     true
                 }
 
@@ -657,7 +659,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                         getString(R.string.settings_general_dynamic_colors_summary_disabled)
                     }
                 }
-                dynamicColorsEnabled?.isVisible = true
+                dynamicColorsEnabled?.isEnabled = true
             }
 
             // Default Base URL
@@ -732,7 +734,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             // Export logs
             val exportLogsPrefId = context?.getString(R.string.settings_advanced_export_logs_key) ?: return
             val exportLogs: ListPreference? = findPreference(exportLogsPrefId)
-            exportLogs?.isVisible = Log.getRecord()
+            exportLogs?.isEnabled = Log.getRecord()
             exportLogs?.preferenceDataStore = object : PreferenceDataStore() { } // Dummy store to protect from accidentally overwriting
             exportLogs?.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _, v ->
                 when (v) {
@@ -747,7 +749,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             // Clear logs
             val clearLogsPrefId = context?.getString(R.string.settings_advanced_clear_logs_key) ?: return
             val clearLogs: Preference? = findPreference(clearLogsPrefId)
-            clearLogs?.isVisible = Log.getRecord()
+            clearLogs?.isEnabled = Log.getRecord()
             clearLogs?.preferenceDataStore = object : PreferenceDataStore() { } // Dummy store to protect from accidentally overwriting
             clearLogs?.onPreferenceClickListener = OnPreferenceClickListener {
                 deleteLogs()
@@ -762,8 +764,8 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 override fun putBoolean(key: String?, value: Boolean) {
                     repository.setRecordLogsEnabled(value)
                     Log.setRecord(value)
-                    exportLogs?.isVisible = value
-                    clearLogs?.isVisible = value
+                    exportLogs?.isEnabled = value
+                    clearLogs?.isEnabled = value
                 }
                 override fun getBoolean(key: String?, defValue: Boolean): Boolean {
                     return Log.getRecord()
@@ -1066,7 +1068,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             // the alarm manager's canScheduleExactAlarms() method will return true.
             //
             // This is undocumented behavior. See https://github.com/binwiederhier/ntfy/issues/1456#issuecomment-3707174262
-            exactAlarmsPref?.isVisible = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            exactAlarmsPref?.isEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                     && !isIgnoringBatteryOptimizations(context)
         }
 

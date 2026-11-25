@@ -497,4 +497,21 @@
     <string name="connection_alert_snoozed_toast">连接丢失警报推迟了 %1$d 小时</string>
     <string name="channel_subscriber_notification_no_network_title">正在等待网络</string>
     <string name="channel_subscriber_notification_no_network_text">当 Wi-Fi 或移动数据可用时通知将恢复</string>
+    <string name="trash_title">回收站</string>
+    <string name="trash_count">回收站里有 %1$d 条信息</string>
+    <string name="trash_summary">恢复误删除的信息，或永久清理</string>
+    <string name="trash_retention_label">自动清空回收站</string>
+    <string name="trash_restore">恢复</string>
+    <string name="trash_delete_forever">永久删除</string>
+    <string name="trash_restore_all">全部恢复</string>
+    <string name="trash_empty">清空回收站</string>
+    <string name="trash_confirm_delete">永久删除此条信息及其本地附件？此操作不可恢复。</string>
+    <string name="trash_confirm_empty">确定永久删除回收站里的全部信息吗？此操作不可恢复。</string>
+    <string name="trash_confirm_restore_all">确定恢复回收站里的全部信息吗？</string>
+    <string name="trash_empty_hint">回收站暂无信息</string>
+    <string name="trash_retention_never">永不自动清空</string>
+    <string name="trash_retention_one_day">1天</string>
+    <string name="trash_retention_one_week">7天</string>
+    <string name="trash_retention_one_month">30天（默认）</string>
+    <string name="trash_retention_three_months">90天</string>
 </resources>

@@ -33,6 +33,11 @@ class DeleteWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             // Run "expired icons" and "expired attachments" before notifications,
             // so we will also catch manually deleted notifications
             try {
+                Repository.getInstance(applicationContext).purgeExpiredTrash(applicationContext)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to clean expired recycle-bin messages", e)
+            }
+            try {
                 deleteExpiredIcons()
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to delete expired icons", e)

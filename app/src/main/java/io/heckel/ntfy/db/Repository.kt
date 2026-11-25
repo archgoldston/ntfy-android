@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong
 class Repository(private val sharedPrefs: SharedPreferences, database: Database) {
     private val subscriptionDao = database.subscriptionDao()
     private val notificationDao = database.notificationDao()
+    private val deletedMessageIdDao = database.deletedMessageIdDao()
     private val userDao = database.userDao()
     private val trustedCertificateDao = database.trustedCertificateDao()
     private val clientCertificateDao = database.clientCertificateDao()
@@ -113,6 +114,45 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
         return notificationDao.listDeletedWithAttachments()
     }
 
+    fun getTrashMessages(subscriptionId: Long): List<Notification> = notificationDao.listTrash(subscriptionId)
+
+    fun restoreAllTrash(subscriptionId: Long) = notificationDao.restoreAllTrash(subscriptionId)
+
+    // Preserve only the (ID, subscription) tombstone to prevent re-delivery after hard deletion.
+    // We delete the local attachment before deleting the database row.
+    fun permanentlyDeleteTrash(context: Context, notification: Notification) {
+        val current = notificationDao.get(notification.id) ?: return
+        if (!current.deleted || current.recycledAt == 0L || current.subscriptionId != notification.subscriptionId) return
+        val uri = current.attachment?.contentUri
+        if (!uri.isNullOrEmpty()) {
+            try {
+                context.contentResolver.delete(android.net.Uri.parse(uri), null, null)
+            } catch (e: Exception) {
+                Log.w("NtfyTrash", "Could not delete local attachment for ${current.id}", e)
+            }
+        }
+        deletedMessageIdDao.add(DeletedMessageId(current.id, current.subscriptionId))
+        notificationDao.permanentlyDeleteTrash(current.id, current.subscriptionId)
+    }
+
+    fun emptyTrash(context: Context, subscriptionId: Long) {
+        notificationDao.listTrash(subscriptionId).forEach { permanentlyDeleteTrash(context, it) }
+    }
+
+    fun purgeExpiredTrash(context: Context) {
+        val retention = getTrashRetentionSeconds()
+        if (retention == 0L) return
+        val expired = notificationDao.expiredTrash(System.currentTimeMillis() / 1000L - retention)
+        expired.forEach { permanentlyDeleteTrash(context, it) }
+    }
+
+    fun getTrashRetentionSeconds(): Long = sharedPrefs.getLong(SHARED_PREFS_TRASH_RETENTION, TRASH_RETENTION_DEFAULT)
+
+    fun setTrashRetentionSeconds(value: Long) {
+        require(value in listOf(0L, 86400L, 604800L, 2592000L, 7776000L))
+        sharedPrefs.edit { putLong(SHARED_PREFS_TRASH_RETENTION, value) }
+    }
+
     fun getActiveIconUris(): Set<String> {
         return notificationDao.listActiveIconUris().toSet()
     }
@@ -137,7 +177,9 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
     @WorkerThread
     suspend fun addNotification(notification: Notification): Boolean {
         val maybeExistingNotification = notificationDao.get(notification.id)
-        if (maybeExistingNotification != null || notification.event != ApiService.EVENT_MESSAGE) {
+        if (maybeExistingNotification != null ||
+            deletedMessageIdDao.contains(notification.id, notification.subscriptionId) ||
+            notification.event != ApiService.EVENT_MESSAGE) {
             return false
         }
         // Mark old notifications with the same sequence ID as deleted (this is an update to an existing sequence)
@@ -158,7 +200,7 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
     }
 
     fun markAsDeleted(notificationId: String) {
-        notificationDao.markAsDeleted(notificationId)
+        notificationDao.markAsDeleted(notificationId, System.currentTimeMillis() / 1000L)
     }
 
     fun markAsDeletedBySequenceId(subscriptionId: Long, sequenceId: String) {
@@ -179,7 +221,7 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
     }
 
     fun markAllAsDeleted(subscriptionId: Long) {
-        notificationDao.markAllAsDeleted(subscriptionId)
+        notificationDao.markAllAsDeleted(subscriptionId, System.currentTimeMillis() / 1000L)
     }
 
     fun markAllAsRead(subscriptionId: Long) {
@@ -684,6 +726,8 @@ class Repository(private val sharedPrefs: SharedPreferences, database: Database)
         const val SHARED_PREFS_AUTO_DOWNLOAD_MAX_SIZE = "AutoDownload"
         private const val SHARED_PREFS_SINGLE_TOPIC = "SingleTopicV1"
         const val SHARED_PREFS_AUTO_DELETE_SECONDS = "AutoDelete"
+        private const val SHARED_PREFS_TRASH_RETENTION = "TrashRetentionSeconds"
+        const val TRASH_RETENTION_DEFAULT = 30L * 24L * 60L * 60L
         const val SHARED_PREFS_CONNECTION_PROTOCOL = "ConnectionProtocol"
         const val SHARED_PREFS_DARK_MODE = "DarkMode"
         const val SHARED_PREFS_DYNAMIC_COLORS = "DynamicColors"

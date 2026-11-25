@@ -160,6 +160,7 @@ data class Notification(
     @ColumnInfo(name = "actions") val actions: List<Action>?,
     @Embedded(prefix = "attachment_") val attachment: Attachment?,
     @ColumnInfo(name = "deleted") val deleted: Boolean,
+    @ColumnInfo(name = "recycledAt", defaultValue = "0") val recycledAt: Long = 0L, // seconds; 0 means not in trash
     @Ignore val event: String = ApiService.EVENT_MESSAGE, // In-memory event type (message, message_delete, message_clear)
 ) {
     constructor(
@@ -178,11 +179,27 @@ data class Notification(
         icon: Icon?,
         actions: List<Action>?,
         attachment: Attachment?,
-        deleted: Boolean
+        deleted: Boolean,
+        recycledAt: Long
     ) : this(
         id, subscriptionId, timestamp, sequenceId, title, message, contentType, encoding,
-        notificationId, priority, tags, click, icon, actions, attachment, deleted, event = ApiService.EVENT_MESSAGE
+        notificationId, priority, tags, click, icon, actions, attachment, deleted, recycledAt, event = ApiService.EVENT_MESSAGE
     )
+}
+
+@Entity(primaryKeys = ["id", "subscriptionId"])
+data class DeletedMessageId(
+    val id: String,
+    val subscriptionId: Long
+)
+
+@Dao
+interface DeletedMessageIdDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun add(value: DeletedMessageId)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM DeletedMessageId WHERE id=:id AND subscriptionId=:subscriptionId)")
+    fun contains(id: String, subscriptionId: Long): Boolean
 }
 
 fun Notification.isMarkdown(): Boolean {
@@ -299,10 +316,11 @@ data class LogEntry(
 }
 
 @androidx.room.Database(
-    version = 18,
+    version = 19,
     entities = [
         Subscription::class,
         Notification::class,
+        DeletedMessageId::class,
         User::class,
         LogEntry::class,
         CustomHeader::class,
@@ -314,6 +332,7 @@ data class LogEntry(
 abstract class Database : RoomDatabase() {
     abstract fun subscriptionDao(): SubscriptionDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun deletedMessageIdDao(): DeletedMessageIdDao
     abstract fun userDao(): UserDao
     abstract fun customHeaderDao(): CustomHeaderDao
     abstract fun logDao(): LogDao
@@ -345,6 +364,7 @@ abstract class Database : RoomDatabase() {
                     .addMigrations(MIGRATION_15_16)
                     .addMigrations(MIGRATION_16_17)
                     .addMigrations(MIGRATION_17_18)
+                    .addMigrations(MIGRATION_18_19)
                     .fallbackToDestructiveMigration(true)
                     .build()
                 this.instance = instance
@@ -479,6 +499,13 @@ abstract class Database : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE Notification ADD COLUMN recycledAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE TABLE IF NOT EXISTS DeletedMessageId (id TEXT NOT NULL, subscriptionId INTEGER NOT NULL, PRIMARY KEY(id, subscriptionId))")
+            }
+        }
+
         private val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE Notification ADD COLUMN sequenceId TEXT NOT NULL DEFAULT ''")
@@ -603,10 +630,10 @@ interface NotificationDao {
     """)
     fun listFlowFiltered(subscriptionId: Long, query: String): Flow<List<Notification>>
 
-    @Query("SELECT * FROM notification WHERE deleted = 1 AND attachment_contentUri <> ''")
+    @Query("SELECT * FROM notification WHERE deleted = 1 AND recycledAt = 0 AND attachment_contentUri <> ''")
     fun listDeletedWithAttachments(): List<Notification>
 
-    @Query("SELECT DISTINCT icon_contentUri FROM notification WHERE deleted != 1 AND icon_contentUri <> ''")
+    @Query("SELECT DISTINCT icon_contentUri FROM notification WHERE (deleted != 1 OR recycledAt > 0) AND icon_contentUri <> ''")
     fun listActiveIconUris(): List<String>
 
     @Query("UPDATE notification SET icon_contentUri = null WHERE icon_contentUri = :uri")
@@ -627,22 +654,34 @@ interface NotificationDao {
     @Query("UPDATE notification SET notificationId = 0 WHERE subscriptionId = :subscriptionId AND sequenceId = :sequenceId")
     fun markAsReadBySequenceId(subscriptionId: Long, sequenceId: String)
 
-    @Query("UPDATE notification SET deleted = 1 WHERE id = :notificationId")
-    fun markAsDeleted(notificationId: String)
+    @Query("UPDATE notification SET deleted = 1, recycledAt = :now WHERE id = :notificationId AND deleted = 0")
+    fun markAsDeleted(notificationId: String, now: Long)
 
     @Query("UPDATE notification SET deleted = 1 WHERE subscriptionId = :subscriptionId AND sequenceId = :sequenceId")
     fun markAsDeletedBySequenceId(subscriptionId: Long, sequenceId: String)
 
-    @Query("UPDATE notification SET deleted = 1 WHERE subscriptionId = :subscriptionId")
-    fun markAllAsDeleted(subscriptionId: Long)
+    @Query("UPDATE notification SET deleted = 1, recycledAt = :now WHERE subscriptionId = :subscriptionId AND deleted = 0")
+    fun markAllAsDeleted(subscriptionId: Long, now: Long)
 
     @Query("UPDATE notification SET deleted = 1 WHERE subscriptionId = :subscriptionId AND timestamp < :olderThanTimestamp")
     fun markAsDeletedIfOlderThan(subscriptionId: Long, olderThanTimestamp: Long)
 
-    @Query("UPDATE notification SET deleted = 0 WHERE id = :notificationId")
+    @Query("UPDATE notification SET deleted = 0, recycledAt = 0, notificationId = 0 WHERE id = :notificationId AND recycledAt > 0")
     fun undelete(notificationId: String)
 
-    @Query("DELETE FROM notification WHERE subscriptionId = :subscriptionId AND timestamp < :olderThanTimestamp")
+    @Query("SELECT * FROM notification WHERE subscriptionId = :subscriptionId AND deleted = 1 AND recycledAt > 0 ORDER BY recycledAt DESC, timestamp DESC")
+    fun listTrash(subscriptionId: Long): List<Notification>
+
+    @Query("SELECT * FROM notification WHERE deleted = 1 AND recycledAt > 0 AND recycledAt <= :timestamp")
+    fun expiredTrash(timestamp: Long): List<Notification>
+
+    @Query("UPDATE notification SET deleted = 0, recycledAt = 0, notificationId = 0 WHERE subscriptionId = :subscriptionId AND recycledAt > 0")
+    fun restoreAllTrash(subscriptionId: Long)
+
+    @Query("DELETE FROM notification WHERE id = :id AND subscriptionId = :subscriptionId AND recycledAt > 0")
+    fun permanentlyDeleteTrash(id: String, subscriptionId: Long)
+
+    @Query("DELETE FROM notification WHERE subscriptionId = :subscriptionId AND timestamp < :olderThanTimestamp AND recycledAt = 0")
     fun removeIfOlderThan(subscriptionId: Long, olderThanTimestamp: Long)
 
     @Query("DELETE FROM notification WHERE subscriptionId = :subscriptionId")

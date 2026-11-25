@@ -12,6 +12,7 @@
             app:key="single_subscription_channels"
             app:title="@string/detail_settings_notifications_dedicated_channels_title" />
         <Preference app:iconSpaceReserved="false"
+            app:enabled="false"
             app:key="single_subscription_open_channels"
             app:title="@string/detail_settings_notifications_open_channels_title"
             app:summary="@string/detail_settings_notifications_open_channels_summary" />
@@ -20,6 +21,7 @@
             app:title="@string/detail_settings_appearance_icon_set_title"
             app:summary="@string/detail_settings_appearance_icon_set_summary" />
         <Preference app:iconSpaceReserved="false"
+            app:enabled="false"
             app:key="single_subscription_icon_remove"
             app:title="@string/detail_settings_appearance_icon_remove_title" />
         <ListPreference app:iconSpaceReserved="false"
@@ -37,6 +39,10 @@
             app:title="@string/settings_notifications_insistent_max_priority_title"
             app:entries="@array/detail_settings_notifications_insistent_max_priority_entries"
             app:entryValues="@array/detail_settings_notifications_insistent_max_priority_values" />
+        <Preference app:iconSpaceReserved="false"
+            app:key="single_subscription_trash"
+            app:title="@string/trash_title"
+            app:summary="@string/trash_summary" />
         <Preference app:iconSpaceReserved="false"
             app:key="single_subscription_clear_all"
             app:title="@string/single_clear_all_messages_title"
@@ -99,7 +105,7 @@
         <SwitchPreferenceCompat app:iconSpaceReserved="false"
                 app:key="@string/settings_general_dynamic_colors_key"
                 app:title="@string/settings_general_dynamic_colors_title"
-                app:isPreferenceVisible="false"/>
+                app:enabled="false"/>
     </PreferenceCategory>
     <PreferenceCategory app:iconSpaceReserved="false" app:title="@string/settings_backup_restore_header">
         <ListPreference app:iconSpaceReserved="false"
@@ -153,6 +159,7 @@
                 app:title="@string/settings_advanced_record_logs_title"
                 app:enabled="true"/>
         <ListPreference app:iconSpaceReserved="false"
+                app:enabled="false"
                 app:key="@string/settings_advanced_export_logs_key"
                 app:title="@string/settings_advanced_export_logs_title"
                 app:summary="@string/settings_advanced_export_logs_summary"
@@ -160,6 +167,7 @@
                 app:entryValues="@array/settings_advanced_export_logs_values"
                 app:defaultValue="copy"/>
         <Preference app:iconSpaceReserved="false"
+                app:enabled="false"
                 app:key="@string/settings_advanced_clear_logs_key"
                 app:title="@string/settings_advanced_clear_logs_title"
                 app:summary="@string/settings_advanced_clear_logs_summary"/>

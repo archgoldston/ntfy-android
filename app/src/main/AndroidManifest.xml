@@ -72,6 +72,11 @@
                     android:value=".ui.MainActivity"/>
         </activity>
 
+        <activity
+                android:name=".ui.TrashActivity"
+                android:parentActivityName=".ui.SettingsActivity"
+                android:exported="false" />
+
         <!-- Detail settings activity -->
         <activity
                 android:name=".ui.DetailSettingsActivity"
