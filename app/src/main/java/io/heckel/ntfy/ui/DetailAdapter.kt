@@ -205,14 +205,14 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
 
         private fun maybeRenderAttachment(context: Context, notification: Notification, attachmentFileStat: FileInfo?) {
             if (notification.attachment == null) {
-                attachmentImageView.visibility = View.GONE
+                maybeRenderAttachmentImage(null)
                 attachmentBoxView.visibility = View.GONE
                 return
             }
             val attachment = notification.attachment
             val image = attachment.contentUri != null && supportedImage(attachment.type) && previewableImage(attachmentFileStat)
             val bitmap = if (image) attachment.contentUri.readBitmapFromUriOrNull(context) else null
-            maybeRenderAttachmentImage(bitmap, attachment)
+            maybeRenderAttachmentImage(bitmap)
             maybeRenderAttachmentBox(context, notification, attachment, attachmentFileStat, bitmap)
         }
 
@@ -391,21 +391,37 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             }
         }
 
-        private fun maybeRenderAttachmentImage(bitmap: Bitmap?, attachment: Attachment) {
-            if (bitmap == null) {
-                // RecyclerView recycles holders: clear any pending old image request, too.
-                Glide.with(activity).clear(attachmentImageView)
-                attachmentImageView.setImageDrawable(null)
-                attachmentImageView.setOnClickListener(null)
-                attachmentImageView.visibility = View.GONE
-                return
+        private fun maybeRenderAttachmentImage(bitmap: Bitmap?) {
+            // A recycled row may have an old asynchronous Glide request and size.
+            // Cancel it before rebinding so reopening the viewer or scrolling never
+            // changes the thumbnail dimensions of this notification.
+            Glide.with(activity).clear(attachmentImageView)
+            attachmentImageView.setImageDrawable(null)
+            attachmentImageView.setOnClickListener(null)
+            attachmentImageView.visibility = View.GONE
+            if (bitmap == null) return
+
+            // Each bind derives an explicit dp-bounded size from the bitmap's ratio.
+            // Do not use wrap_content + adjustViewBounds + asynchronous Glide sizing:
+            // that combination can make identical pictures appear at different sizes
+            // after the RecyclerView reuses a card.
+            val density = itemView.resources.displayMetrics.density
+            val maxWidthPx = (180f * density + 0.5f).toInt().coerceAtLeast(1)
+            val maxHeightPx = (160f * density + 0.5f).toInt().coerceAtLeast(1)
+            val scale = minOf(
+                maxWidthPx.toFloat() / bitmap.width.coerceAtLeast(1),
+                maxHeightPx.toFloat() / bitmap.height.coerceAtLeast(1)
+            )
+            val thumbnailWidth = (bitmap.width * scale + 0.5f).toInt().coerceIn(1, maxWidthPx)
+            val thumbnailHeight = (bitmap.height * scale + 0.5f).toInt().coerceIn(1, maxHeightPx)
+            attachmentImageView.layoutParams = attachmentImageView.layoutParams.apply {
+                width = thumbnailWidth
+                height = thumbnailHeight
             }
-            // Never hide the thumbnail for a shared-element transition. That could leave
-            // a blank image slot when the viewer closes or the holder is recycled.
-            Glide.with(activity).load(attachment.contentUri).fitCenter().into(attachmentImageView)
-            attachmentImageView.setOnClickListener {
-                showAttachmentImage(bitmap)
-            }
+            attachmentImageView.adjustViewBounds = false
+            attachmentImageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            attachmentImageView.setImageBitmap(bitmap)
+            attachmentImageView.setOnClickListener { showAttachmentImage(bitmap) }
             attachmentImageView.visibility = View.VISIBLE
         }
 
