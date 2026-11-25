@@ -168,6 +168,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
 
         private fun setupSingleSubscriptionPreferences() {
             val urlPref = findPreference<Preference>("single_topic_url")
+            urlPref?.title = "\u8ba2\u9605\u5730\u5740\uff08\u70b9\u51fb\u7f16\u8f91\uff09"
             val priorityPref = findPreference<ListPreference>("single_subscription_priority")
             val insistentPref = findPreference<ListPreference>("single_subscription_insistent")
             val namePref = findPreference<EditTextPreference>("single_subscription_display_name")
@@ -230,8 +231,89 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 }
                 val url = "${sub.baseUrl.trimEnd('/')}/${sub.topic}"
                 urlPref?.summary = url
+                urlPref?.title = "\u8ba2\u9605\u5730\u5740\uff08\u70b9\u51fb\u7f16\u8f91\uff09"
                 urlPref?.setOnPreferenceClickListener {
-                    copyToClipboard(requireContext(), "topic url", url)
+                    val ctx = requireContext()
+                    val input = android.widget.EditText(ctx).apply {
+                        setSingleLine(true)
+                        setText(urlPref?.summary?.toString() ?: url)
+                        setSelection(text.length)
+                    }
+                    val margin = (24 * resources.displayMetrics.density).toInt()
+                    val holder = android.widget.FrameLayout(ctx).apply {
+                        setPadding(margin, 0, margin, 0)
+                        addView(input, android.widget.FrameLayout.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        ))
+                    }
+                    val dialog = MaterialAlertDialogBuilder(ctx)
+                        .setTitle("\u7f16\u8f91\u8ba2\u9605\u5730\u5740")
+                        .setMessage("\u53ef\u7c98\u8d34\u65e7\u624b\u673a\u7684\u5b8c\u6574\u8ba2\u9605\u5730\u5740\uff0c\u6216\u53ea\u586b\u4e3b\u9898\u540d\u3002")
+                        .setView(holder)
+                        .setNeutralButton("\u590d\u5236\u5730\u5740") { _, _ ->
+                            copyToClipboard(ctx, "topic url", urlPref?.summary?.toString() ?: url)
+                        }
+                        .setNegativeButton("\u53d6\u6d88", null)
+                        .setPositiveButton("\u4fdd\u5b58", null)
+                        .create()
+                    dialog.setOnShowListener {
+                        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                            val entered = input.text.toString().trim()
+                            val fullAddress = if (entered.matches(Regex("[A-Za-z0-9_-]{1,64}"))) {
+                                "https://ntfy.sh/$entered"
+                            } else entered
+                            val parsed = Uri.parse(fullAddress)
+                            val scheme = parsed.scheme?.lowercase(Locale.ROOT)
+                            val topicName = parsed.pathSegments.singleOrNull()
+                            val valid = (scheme == "https" || scheme == "http") &&
+                                !parsed.host.isNullOrBlank() &&
+                                parsed.encodedAuthority?.contains("@") != true &&
+                                parsed.query == null && parsed.fragment == null &&
+                                topicName != null && topicName.matches(Regex("[A-Za-z0-9_-]{1,64}"))
+                            if (!valid) {
+                                input.error = "\u8bf7\u8f93\u5165\u6709\u6548\u7684 ntfy \u8ba2\u9605\u5730\u5740"
+                                return@setOnClickListener
+                            }
+                            val newBaseUrl = "$scheme://${parsed.encodedAuthority}"
+                            val newTopic = topicName!!
+                            lifecycleScope.launch {
+                                try {
+                                    val changed = withContext(Dispatchers.IO) {
+                                        val latest = repository.getSubscription(sub.id)
+                                            ?: throw IllegalStateException("Subscription no longer exists")
+                                        val duplicate = repository.getSubscription(newBaseUrl, newTopic)
+                                        if (duplicate != null && duplicate.id != latest.id) {
+                                            throw IllegalStateException("Topic already subscribed")
+                                        }
+                                        if (latest.baseUrl == newBaseUrl && latest.topic == newTopic) {
+                                            false
+                                        } else {
+                                            // Keep the subscription ID, local messages and trash;
+                                            // reset the old topic's sync cursor before reconnecting.
+                                            repository.updateSubscription(latest.copy(
+                                                baseUrl = newBaseUrl,
+                                                topic = newTopic,
+                                                lastNotificationId = null
+                                            ))
+                                            true
+                                        }
+                                    }
+                                    if (isAdded) {
+                                        urlPref?.summary = "$newBaseUrl/$newTopic"
+                                        if (changed) serviceManager.refresh()
+                                        Toast.makeText(requireContext(),
+                                            "\u8ba2\u9605\u5730\u5740\u5df2\u4fdd\u5b58", Toast.LENGTH_SHORT).show()
+                                    }
+                                    dialog.dismiss()
+                                } catch (e: Exception) {
+                                    Log.w("SingleTopicSettings", "Could not update subscription URL", e)
+                                    if (isAdded) input.error = e.message ?: "\u4fdd\u5b58\u5931\u8d25"
+                                }
+                            }
+                        }
+                    }
+                    dialog.show()
                     true
                 }
                 priorityPref?.value = sub.minPriority.toString()

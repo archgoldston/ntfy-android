@@ -566,6 +566,8 @@ class DetailActivity : AppCompatActivity(), NotificationFragment.NotificationSet
         // Update buttons (this is for when we return from the preferences screen)
         lifecycleScope.launch(Dispatchers.IO) {
             val subscription = repository.getSubscription(subscriptionId) ?: return@launch
+            subscriptionBaseUrl = subscription.baseUrl
+            subscriptionTopic = subscription.topic
             subscriptionMutedUntil = subscription.mutedUntil
             subscriptionDisplayName = displayName(appBaseUrl, subscription)
 
