@@ -30,11 +30,6 @@
             app:entries="@array/detail_settings_notifications_min_priority_entries"
             app:entryValues="@array/detail_settings_notifications_min_priority_values" />
         <ListPreference app:iconSpaceReserved="false"
-            app:key="single_subscription_autodelete"
-            app:title="@string/settings_notifications_auto_delete_title"
-            app:entries="@array/detail_settings_notifications_auto_delete_entries"
-            app:entryValues="@array/detail_settings_notifications_auto_delete_values" />
-        <ListPreference app:iconSpaceReserved="false"
             app:key="single_subscription_insistent"
             app:title="@string/settings_notifications_insistent_max_priority_title"
             app:entries="@array/detail_settings_notifications_insistent_max_priority_entries"

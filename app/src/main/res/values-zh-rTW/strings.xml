@@ -202,7 +202,7 @@
     <string name="detail_item_menu_delete">刪除檔案</string>
     <string name="detail_item_menu_cancel">取消下載</string>
     <string name="detail_item_menu_save_file">儲存檔案</string>
-    <string name="detail_item_menu_copy_contents">複製通知</string>
+    <string name="detail_item_menu_copy_contents">複製此則訊息</string>
     <string name="detail_item_cannot_open_url">無法開啟 URL：%1$s</string>
     <string name="detail_item_saved_successfully">儲存為「Downloads」資料夾中的「%1$s」</string>
     <string name="detail_test_message_error_unauthorized_user">無法傳送訊息：使用者 %1$s 未獲授權。</string>

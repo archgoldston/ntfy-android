@@ -303,7 +303,6 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             val attachment = notification.attachment // May be null
             val hasAttachment = attachment != null
             val attachmentExists = attachmentFileStat != null
-            val hasClickLink = notification.click != ""
             val downloadItem = popup.menu.findItem(R.id.detail_item_menu_download)
             val cancelItem = popup.menu.findItem(R.id.detail_item_menu_cancel)
             val deleteNotificationItem = popup.menu.findItem(R.id.detail_item_menu_delete_notification)
@@ -323,10 +322,17 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
                 downloadItem.setOnMenuItemClickListener { downloadFile(context, notification) }
                 cancelItem.setOnMenuItemClickListener { cancelDownload(context, notification) }
             }
-            if (hasClickLink) {
-                copyContentsItem.setOnMenuItemClickListener {
-                    copyToClipboard(context, "notification", decodeMessage(notification)); true
+            copyContentsItem.setOnMenuItemClickListener {
+                val content = listOf(
+                    notification.title,
+                    decodeMessage(notification),
+                    notification.attachment?.url.orEmpty(),
+                    notification.click
+                ).filter { it.isNotBlank() }.distinct().joinToString("\n")
+                if (content.isNotBlank()) {
+                    copyToClipboard(context, "notification", content)
                 }
+                true
             }
             openItem.isVisible = hasAttachment && attachmentExists
             downloadItem.isVisible = hasAttachment && !attachmentExists && !expired && !inProgress
@@ -334,7 +340,7 @@ class DetailAdapter(private val activity: Activity, private val lifecycleScope: 
             saveFileItem.isVisible = hasAttachment && attachmentExists
             copyUrlItem.isVisible = hasAttachment && !expired
             cancelItem.isVisible = hasAttachment && inProgress
-            copyContentsItem.isVisible = notification.click != ""
+            copyContentsItem.isVisible = true
             val noOptions = !openItem.isVisible && !saveFileItem.isVisible && !downloadItem.isVisible
                     && !copyUrlItem.isVisible && !cancelItem.isVisible && !deleteItem.isVisible
                     && !copyContentsItem.isVisible && !deleteNotificationItem.isVisible

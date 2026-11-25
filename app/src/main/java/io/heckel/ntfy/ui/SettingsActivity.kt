@@ -169,7 +169,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         private fun setupSingleSubscriptionPreferences() {
             val urlPref = findPreference<Preference>("single_topic_url")
             val priorityPref = findPreference<ListPreference>("single_subscription_priority")
-            val deletePref = findPreference<ListPreference>("single_subscription_autodelete")
             val insistentPref = findPreference<ListPreference>("single_subscription_insistent")
             val namePref = findPreference<EditTextPreference>("single_subscription_display_name")
             val channelsPref = findPreference<SwitchPreferenceCompat>("single_subscription_channels")
@@ -218,6 +217,17 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                     }
                 } ?: return@launch
                 singleId = sub.id
+                // A single-topic client uses the global auto-delete setting only.
+                // Clear a legacy per-topic override once settings are opened.
+                if (sub.autoDelete != Repository.AUTO_DELETE_USE_GLOBAL) {
+                    withContext(Dispatchers.IO) {
+                        repository.getSubscription(sub.id)?.let {
+                            if (it.autoDelete != Repository.AUTO_DELETE_USE_GLOBAL) {
+                                repository.updateSubscription(it.copy(autoDelete = Repository.AUTO_DELETE_USE_GLOBAL))
+                            }
+                        }
+                    }
+                }
                 val url = "${sub.baseUrl.trimEnd('/')}/${sub.topic}"
                 urlPref?.summary = url
                 urlPref?.setOnPreferenceClickListener {
@@ -225,7 +235,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                     true
                 }
                 priorityPref?.value = sub.minPriority.toString()
-                deletePref?.value = sub.autoDelete.toString()
                 insistentPref?.value = sub.insistent.toString()
                 namePref?.text = sub.displayName.orEmpty()
                 channelsPref?.isChecked = sub.dedicatedChannels
@@ -289,13 +298,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                     val v = value.toString().toIntOrNull() ?: return@setOnPreferenceChangeListener false
                     lifecycleScope.launch(Dispatchers.IO) {
                         repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(minPriority = v)) }
-                    }
-                    true
-                }
-                deletePref?.setOnPreferenceChangeListener { _, value ->
-                    val v = value.toString().toLongOrNull() ?: return@setOnPreferenceChangeListener false
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(autoDelete = v)) }
                     }
                     true
                 }
