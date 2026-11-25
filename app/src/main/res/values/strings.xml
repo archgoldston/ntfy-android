@@ -581,4 +581,9 @@
     <string name="single_subscription_url_summary">正在获取地址…</string>
     <string name="single_floating_search">搜索消息</string>
     <string name="single_floating_settings">设置和订阅地址</string>
+    <string name="single_clear_all_messages_title">删除全部信息</string>
+    <string name="single_clear_all_messages_summary">清空当前主题的本机消息，保留订阅地址</string>
+    <string name="single_clear_all_messages_confirm">确定要删除当前主题的全部本地信息吗？这不会删除订阅主题，也不会删除 ntfy 服务器上的数据。</string>
+    <string name="single_clear_all_messages_action">删除全部</string>
+    <string name="single_clear_all_messages_done">已删除全部本地信息</string>
 </resources>

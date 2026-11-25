@@ -168,7 +168,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
 
         private fun setupSingleSubscriptionPreferences() {
             val urlPref = findPreference<Preference>("single_topic_url")
-            val mutePref = findPreference<ListPreference>("single_subscription_mute")
             val priorityPref = findPreference<ListPreference>("single_subscription_priority")
             val deletePref = findPreference<ListPreference>("single_subscription_autodelete")
             val insistentPref = findPreference<ListPreference>("single_subscription_insistent")
@@ -177,6 +176,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             val openChannelsPref = findPreference<Preference>("single_subscription_open_channels")
             val iconSetPref = findPreference<Preference>("single_subscription_icon_set")
             val iconRemovePref = findPreference<Preference>("single_subscription_icon_remove")
+            val clearAllPref = findPreference<Preference>("single_subscription_clear_all")
             var singleId = 0L
             val iconPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { picked ->
                 if (picked != null && singleId != 0L) {
@@ -203,7 +203,15 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             }
             lifecycleScope.launch {
                 val sub = withContext(Dispatchers.IO) {
-                    repository.getSubscriptions().firstOrNull()
+                    repository.getSubscriptions().firstOrNull()?.let { subscription ->
+                        // This client has one topic: use the global pause setting only.
+                        // Reset a legacy per-topic mute so a hidden value cannot block alerts.
+                        if (subscription.mutedUntil != Repository.MUTED_UNTIL_SHOW_ALL) {
+                            val updated = subscription.copy(mutedUntil = Repository.MUTED_UNTIL_SHOW_ALL)
+                            repository.updateSubscription(updated)
+                            updated
+                        } else subscription
+                    }
                 } ?: return@launch
                 singleId = sub.id
                 val url = "${sub.baseUrl.trimEnd('/')}/${sub.topic}"
@@ -211,10 +219,6 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 urlPref?.setOnPreferenceClickListener {
                     copyToClipboard(requireContext(), "topic url", url)
                     true
-                }
-                mutePref?.value = when (sub.mutedUntil) {
-                    0L, 1L -> sub.mutedUntil.toString()
-                    else -> "0"
                 }
                 priorityPref?.value = sub.minPriority.toString()
                 deletePref?.value = sub.autoDelete.toString()
@@ -278,26 +282,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                     true
                 }
 
-                // Preference listeners persist to the subscription, NOT the app-global settings.
-                mutePref?.setOnPreferenceChangeListener { _, value ->
-                    val minutes = value.toString().toLongOrNull() ?: return@setOnPreferenceChangeListener false
-                    val now = System.currentTimeMillis() / 1000L
-                    val until = when (minutes) {
-                        Repository.MUTED_UNTIL_SHOW_ALL, Repository.MUTED_UNTIL_FOREVER -> minutes
-                        Repository.MUTED_UNTIL_TOMORROW -> Calendar.getInstance().apply {
-                            add(Calendar.DAY_OF_MONTH, 1)
-                            set(Calendar.HOUR_OF_DAY, 8)
-                            set(Calendar.MINUTE, 30)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis / 1000L
-                        else -> now + minutes * 60L
-                    }
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(mutedUntil = until)) }
-                    }
-                    true
-                }
+                // The global pause setting under Notifications is the only pause control.
                 priorityPref?.setOnPreferenceChangeListener { _, value ->
                     val v = value.toString().toIntOrNull() ?: return@setOnPreferenceChangeListener false
                     lifecycleScope.launch(Dispatchers.IO) {
@@ -317,6 +302,31 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                     lifecycleScope.launch(Dispatchers.IO) {
                         repository.getSubscription(sub.id)?.let { repository.updateSubscription(it.copy(insistent = v)) }
                     }
+                    true
+                }
+                clearAllPref?.setOnPreferenceClickListener {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.single_clear_all_messages_title)
+                        .setMessage(R.string.single_clear_all_messages_confirm)
+                        .setNegativeButton(R.string.detail_clear_dialog_cancel, null)
+                        .setPositiveButton(R.string.single_clear_all_messages_action) { _, _ ->
+                            lifecycleScope.launch {
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        // Keep the subscription and message IDs, preventing replay.
+                                        // The existing DeleteWorker cleans deleted attachments.
+                                        repository.markAllAsDeleted(sub.id)
+                                    }
+                                    if (isAdded) {
+                                        Toast.makeText(requireContext(),
+                                            R.string.single_clear_all_messages_done, Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w("SingleTopicSettings", "Cannot clear messages", e)
+                                }
+                            }
+                        }
+                        .show()
                     true
                 }
             }
